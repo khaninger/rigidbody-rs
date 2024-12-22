@@ -1,6 +1,5 @@
 use rapier3d::prelude::*;
 
-
 fn main() {
     // The set that will contain our rigid-bodies.
     let mut physics_pipeline = PhysicsPipeline::new();
@@ -10,10 +9,6 @@ fn main() {
     
     // Builder for a body with a status specified by an enum.
     let rigid_body_1 = bodies.insert(RigidBodyBuilder::new(RigidBodyType::Dynamic)
-        .position(Isometry::new(
-            vector![1.0, 3.0, 2.0],
-            vector![0.0, 0.0, 0.4],
-        ))
         .additional_mass_properties(MassProperties::new(
             point![0.0, 1.0, 0.0],
             0.5,
@@ -62,5 +57,7 @@ fn main() {
         let pos2 = bodies[rigid_body_2].position().translation;
         println!("Body 2 Position: {:?}", pos2);
     }
+
+
     
 }
