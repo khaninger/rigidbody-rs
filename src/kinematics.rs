@@ -46,7 +46,7 @@ pub mod kinematics{
                 link_id,
                 &options,
                 &ee_pose,
-                |_| true,
+                |lk| !lk.is_root(),
                 &mut displacements
             );
         }
