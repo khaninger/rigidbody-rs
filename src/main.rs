@@ -19,40 +19,42 @@ fn main() {
         make_roots_fixed: true,
         ..Default::default()
     };
-    let (mut robot, _) = UrdfRobot::from_file(
+    let (mut robot, xrobot) = UrdfRobot::from_file(
         urdf_path,
         urdf_options,
         None
     ).unwrap();
 
-    println!("robot: {:#?}, njoints {:?}, nlinks {:?}", robot.links, robot.joints.len(), robot.links.len());
+    //println!("robot: {:#?}, njoints {:?}, nlinks {:?}", robot.links, robot.joints.len(), robot.links.len());
 
-    for jt in robot.joints.iter() {
-        println!("jt locked axes {:?}", jt.joint.locked_axes);
-    }
+    for lk in xrobot.links.iter() { println!("xrobot link {:?}", lk.name); }   
+    
+    // for jt in robot.joints.iter() { println!("jt locked axes {:?}", jt.joint.locked_axes); }
 
-    for lk in robot.links.iter() {
-        println!("link fixed {:?}", lk.body.is_fixed());
-    }
+    // for lk in robot.links.iter() { println!("link fixed {:?}", lk.body.is_fixed()); }
 
+    // TODO: Can we make first joint fixed somehow? 
+    
     let handles = robot.insert_using_multibody_joints(&mut bodies, &mut colliders, &mut multibody_joints, UrdfMultibodyOptions::DISABLE_SELF_CONTACTS);
 
-    let multibody_handle = handles.joints.iter().last().unwrap().joint.unwrap();
+    let ee_link_handle = handles.links[16].body;
+    let (_, _, multibody_handle) = multibody_joints.attached_joints(ee_link_handle).last().unwrap();    
+    //let multibody_handle = handles.joints.iter().last().unwrap().joint.unwrap();
     
-    println!("multibody_handle {:?}", multibody_handle);
-    println!("multibody {:#?}", multibody_joints.get_mut(multibody_handle));
+    //println!("multibody_handle {:?}", multibody_handle);
+    //println!("multibody {:#?}", multibody_joints.get_mut(multibody_handle));
 
     let jt_angles = inv_kin(&mut bodies,
-                          &mut multibody_joints,
-                          multibody_handle,
-                          Isometry::identity()
+                            &mut multibody_joints,
+                            multibody_handle,
+                            Isometry::translation(0.,0.,0.5)
     );
     println!("jt angles: {:?}", jt_angles);
 
     let ee_pose = fwd_kin(&mut bodies,
                           &mut multibody_joints,
                           multibody_handle,
-                          handles.links.iter().last().unwrap().body,
+                          ee_link_handle,
                           jt_angles.as_slice());
     println!("ee_pose:   {:?}", ee_pose);
 
