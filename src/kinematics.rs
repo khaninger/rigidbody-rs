@@ -3,25 +3,13 @@ pub mod kinematics{
     use rapier3d::prelude::*;
     
     pub fn fwd_kin(bodies: &mut RigidBodySet,
-                   joints: &mut MultibodyJointSet,
-                   multibody_handle: MultibodyJointHandle,
+                   multibody: &mut Multibody,
                    ee_link: RigidBodyHandle,
                    joint_angles: &[f32]
     ) -> Isometry<f32> {
-        if let Some((multibody, link_id)) = joints.get_mut(multibody_handle) {
-            //println!("multibody num links {:?} num dof {:?}",
-            //         multibody.num_links(),
-            //         multibody.ndofs()
-            //);
-            //println!("0 {:?} 1 {:?}  2 {:?} ",
-            //         bodies.get(multibody.link(0).unwrap().rigid_body_handle()).unwrap().is_rotation_locked(),
-            //         bodies.get(multibody.link(1).unwrap().rigid_body_handle()).unwrap().is_rotation_locked(),
-            //         bodies.get(multibody.link(2).unwrap().rigid_body_handle()).unwrap().is_rotation_locked()
-            //);
-            multibody.apply_displacements(joint_angles);
-            multibody.forward_kinematics(&bodies,false);
-            multibody.update_rigid_bodies(bodies,false);
-        }
+        multibody.apply_displacements(joint_angles);
+        multibody.forward_kinematics(&bodies,false);
+        multibody.update_rigid_bodies(bodies,false);
 
         return *bodies.get(ee_link)
             .expect("ee_link not found in bodies.")
@@ -29,27 +17,26 @@ pub mod kinematics{
     }
     
     pub fn inv_kin(bodies: &mut RigidBodySet,
-                   joints: &mut MultibodyJointSet,
-                   multibody_handle: MultibodyJointHandle,
+                   multibody: &mut Multibody,
+                   link_id: usize,
                    ee_pose: Isometry<f32>
     ) -> DVector<f32> {
         let mut displacements = DVector::zeros(0);
-        if let Some((multibody, link_id)) = joints.get_mut(multibody_handle) {
-            displacements = DVector::zeros(multibody.ndofs());
+        displacements = DVector::zeros(multibody.ndofs());
 
-            let options = InverseKinematicsOption {
-                ..Default::default()
-            };
-            
-            multibody.inverse_kinematics(
-                &bodies,
-                link_id,
-                &options,
-                &ee_pose,
-                |lk| !lk.is_root(),
-                &mut displacements
-            );
-        }
+        let options = InverseKinematicsOption {
+            ..Default::default()
+        };
+
+        multibody.inverse_kinematics(
+            &bodies,
+            link_id,
+            &options,
+            &ee_pose,
+            |lk| !lk.is_root(),
+            &mut displacements
+        );
+        
         return displacements
     }    
 
