@@ -1,6 +1,49 @@
 pub mod kinematics{
 
     use rapier3d::prelude::*;
+    use std::path::Path;
+    use rapier3d_urdf::{UrdfRobot, UrdfLoaderOptions, UrdfMultibodyOptions};
+    
+    pub struct EEKinematicModel {
+        bodies: RigidBodySet,
+        multibody: Multibody,
+        ee_link_handle: RigidBodyHandle,
+        ee_link_id: usize
+    }
+
+    /* the multibody needs to be thought out; we can only get a reference here.
+    impl EEKinematicModel {
+        fn from_urdf(urdf_path: &Path, ee_name: &str) -> EEKinematicModel {
+            let urdf_options = UrdfLoaderOptions {
+                create_colliders_from_collision_shapes: false,
+                create_colliders_from_visual_shapes: false,
+                apply_imported_mass_props: true,
+                make_roots_fixed: true,
+                ..Default::default()
+            };
+            let (mut robot, xrobot) = UrdfRobot::from_file(urdf_path, urdf_options, None).unwrap();
+
+            let mut bodies = RigidBodySet::new();
+            let mut multibody_joints = MultibodyJointSet::new();
+            let mut colliders = ColliderSet::new();
+            
+            let handles = robot.insert_using_multibody_joints(&mut bodies, &mut colliders, &mut multibody_joints, UrdfMultibodyOptions::DISABLE_SELF_CONTACTS);
+
+            let ee_link_handle = handles.links[16].body;
+            let (_, _, ee_joint_handle) = multibody_joints.attached_joints(ee_link_handle).last().unwrap();
+            let (multibody, ee_link_id) = multibody_joints.get_mut(ee_joint_handle).unwrap();
+
+            multibody.forward_kinematics(&mut bodies, false); // Needed so that the extra DOF in root are removed
+
+            EEKinematicModel {
+                bodies: bodies,
+                multibody: multibody,
+                ee_link_handle: ee_link_handle,
+                ee_link_id: ee_link_id
+            }
+        }
+    }
+    */
     
     pub fn fwd_kin(bodies: &mut RigidBodySet,
                    multibody: &mut Multibody,
@@ -27,7 +70,7 @@ pub mod kinematics{
         let options = InverseKinematicsOption {
             ..Default::default()
         };
-
+        
         multibody.inverse_kinematics(
             &bodies,
             link_id,

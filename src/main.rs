@@ -19,21 +19,11 @@ fn main() {
         make_roots_fixed: true,
         ..Default::default()
     };
-    let (mut robot, xrobot) = UrdfRobot::from_file(
-        urdf_path,
-        urdf_options,
-        None
-    ).unwrap();
-
-    //println!("robot: {:#?}, njoints {:?}, nlinks {:?}", robot.links, robot.joints.len(), robot.links.len());
+    let (mut robot, xrobot) = UrdfRobot::from_file(urdf_path, urdf_options, None).unwrap();
 
     // for lk in xrobot.links.iter() { println!("xrobot link {:?}", lk.name); }   
-    
     // for jt in robot.joints.iter() { println!("jt locked axes {:?}", jt.joint.locked_axes); }
-
     // for lk in robot.links.iter() { println!("link fixed {:?}", lk.body.is_fixed()); }
-
-    // TODO: Can we make first joint fixed somehow?
     
     let handles = robot.insert_using_multibody_joints(&mut bodies, &mut colliders, &mut multibody_joints, UrdfMultibodyOptions::DISABLE_SELF_CONTACTS);
     let ee_link_handle = handles.links[16].body;
@@ -57,7 +47,6 @@ fn main() {
                                ee_link_handle,
                                &[1.0; 7]);
     println!("ee_pose_ones: {:?}", ee_pose_ones);
-
     
     let jt_angles = inv_kin(&mut bodies,
                             &mut multibody,
