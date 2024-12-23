@@ -1,12 +1,12 @@
 
 [package]
-name = "rust_autodiff"
+name = "rigidbody"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 rapier3d = { version = "*", features =  [ ] }
 
-[[bin]]
-  name = "rapier3d_example"
-  path = "./rapier3d_multijoint_example.rs"
+#[[bin]]
+#  name = "rapier3d_example"
+#  path = "./rapier3d_multijoint_example.rs"
