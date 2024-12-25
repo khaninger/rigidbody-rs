@@ -1,17 +1,15 @@
 pub mod kinematics{
-
-    use rapier3d::prelude::*;
     use std::path::Path;
+    use rapier3d::prelude::*;
     use rapier3d_urdf::{UrdfRobot, UrdfLoaderOptions, UrdfMultibodyOptions};
     
     pub struct EEKinematicModel {
         bodies: RigidBodySet,
-        multibody: Multibody,
+        multibody_joints: MultibodyJointSet,
         ee_link_handle: RigidBodyHandle,
         ee_link_id: usize
     }
-
-    /* the multibody needs to be thought out; we can only get a reference here.
+    
     impl EEKinematicModel {
         fn from_urdf(urdf_path: &Path, ee_name: &str) -> EEKinematicModel {
             let urdf_options = UrdfLoaderOptions {
@@ -21,8 +19,15 @@ pub mod kinematics{
                 make_roots_fixed: true,
                 ..Default::default()
             };
-            let (mut robot, xrobot) = UrdfRobot::from_file(urdf_path, urdf_options, None).unwrap();
 
+            let result = UrdfRobot::from_file(urdf_path, urdf_options, None);
+            let (mut robot, xrobot) = match result {
+                Ok(val) => val,
+                Err(err) => {
+                    panic!("Error in URDF loading {}", err);
+                }
+            };
+   
             let mut bodies = RigidBodySet::new();
             let mut multibody_joints = MultibodyJointSet::new();
             let mut colliders = ColliderSet::new();
@@ -37,13 +42,12 @@ pub mod kinematics{
 
             EEKinematicModel {
                 bodies: bodies,
-                multibody: multibody,
+                multibody_joints: multibody_joints,
                 ee_link_handle: ee_link_handle,
                 ee_link_id: ee_link_id
             }
         }
     }
-    */
     
     pub fn fwd_kin(bodies: &mut RigidBodySet,
                    multibody: &mut Multibody,

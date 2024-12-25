@@ -19,7 +19,16 @@ fn main() {
         make_roots_fixed: true,
         ..Default::default()
     };
-    let (mut robot, xrobot) = UrdfRobot::from_file(urdf_path, urdf_options, None).unwrap();
+
+    let result = UrdfRobot::from_file(urdf_path, urdf_options, None);
+
+    let (mut robot, xrobot) = match result {
+        Ok(val) => val,
+        Err(err) => {
+            panic!("Error in URDF loading {}", err);
+        }
+    };
+   
 
     // for lk in xrobot.links.iter() { println!("xrobot link {:?}", lk.name); }   
     // for jt in robot.joints.iter() { println!("jt locked axes {:?}", jt.joint.locked_axes); }
