@@ -7,11 +7,11 @@ pub mod kinematics{
         bodies: RigidBodySet,
         multibody_joints: MultibodyJointSet,
         ee_link_handle: RigidBodyHandle,
-        ee_link_id: usize
+        ee_joint_handle: MultibodyJointHandle
     }
     
     impl EEKinematicModel {
-        fn from_urdf(urdf_path: &Path, ee_name: &str) -> EEKinematicModel {
+        pub fn from_urdf(urdf_path: &Path, ee_name: &str) -> EEKinematicModel {
             let urdf_options = UrdfLoaderOptions {
                 create_colliders_from_collision_shapes: false,
                 create_colliders_from_visual_shapes: false,
@@ -36,7 +36,7 @@ pub mod kinematics{
 
             let ee_link_handle = handles.links[16].body;
             let (_, _, ee_joint_handle) = multibody_joints.attached_joints(ee_link_handle).last().unwrap();
-            let (multibody, ee_link_id) = multibody_joints.get_mut(ee_joint_handle).unwrap();
+            let (mut multibody, ee_link_id) = multibody_joints.get_mut(ee_joint_handle).unwrap();
 
             multibody.forward_kinematics(&mut bodies, false); // Needed so that the extra DOF in root are removed
 
@@ -44,48 +44,48 @@ pub mod kinematics{
                 bodies: bodies,
                 multibody_joints: multibody_joints,
                 ee_link_handle: ee_link_handle,
-                ee_link_id: ee_link_id
+                ee_joint_handle: ee_joint_handle,
             }
         }
+        
+        pub fn fwd_kin(&mut self, joint_angles: &[f32]) -> Isometry<f32> {
+            let (mut multibody, link_id) = self.multibody_joints.get_mut(self.ee_joint_handle).unwrap();
+            
+            multibody.apply_displacements(joint_angles);
+            multibody.forward_kinematics(&self.bodies, false);
+            multibody.update_rigid_bodies(&mut self.bodies, false);
+            
+            return *self.bodies.get(self.ee_link_handle)
+                .expect("ee_link not found in bodies.")
+                .position()
+        }
+        
+        pub fn inv_kin(bodies: &mut RigidBodySet,
+                       multibody: &mut Multibody,
+                       link_id: usize,
+                       ee_pose: Isometry<f32>
+        ) -> DVector<f32> {
+            let mut displacements = DVector::zeros(0);
+            displacements = DVector::zeros(multibody.ndofs());
+            
+            let options = InverseKinematicsOption {
+                ..Default::default()
+            };
+            
+            multibody.inverse_kinematics(
+                &bodies,
+                link_id,
+                &options,
+                &ee_pose,
+                |lk| !lk.is_root(),
+                &mut displacements
+            );
+            
+            return displacements
+        }    
+        
     }
     
-    pub fn fwd_kin(bodies: &mut RigidBodySet,
-                   multibody: &mut Multibody,
-                   ee_link: RigidBodyHandle,
-                   joint_angles: &[f32]
-    ) -> Isometry<f32> {
-        multibody.apply_displacements(joint_angles);
-        multibody.forward_kinematics(&bodies,false);
-        multibody.update_rigid_bodies(bodies,false);
-
-        return *bodies.get(ee_link)
-            .expect("ee_link not found in bodies.")
-            .position()
-    }
-    
-    pub fn inv_kin(bodies: &mut RigidBodySet,
-                   multibody: &mut Multibody,
-                   link_id: usize,
-                   ee_pose: Isometry<f32>
-    ) -> DVector<f32> {
-        let mut displacements = DVector::zeros(0);
-        displacements = DVector::zeros(multibody.ndofs());
-
-        let options = InverseKinematicsOption {
-            ..Default::default()
-        };
-        
-        multibody.inverse_kinematics(
-            &bodies,
-            link_id,
-            &options,
-            &ee_pose,
-            |lk| !lk.is_root(),
-            &mut displacements
-        );
-        
-        return displacements
-    }    
 
     #[cfg(test)]
     mod tests {
