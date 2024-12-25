@@ -1,57 +1,96 @@
 pub mod kinematics{
-
+    use std::path::Path;
     use rapier3d::prelude::*;
+    use rapier3d_urdf::{UrdfRobot, UrdfLoaderOptions, UrdfMultibodyOptions};
     
-    pub fn fwd_kin(bodies: &mut RigidBodySet,
-                   joints: &mut MultibodyJointSet,
-                   multibody_handle: MultibodyJointHandle,
-                   ee_link: RigidBodyHandle,
-                   joint_angles: &[f32]
-    ) -> Isometry<f32> {
-        if let Some((multibody, link_id)) = joints.get_mut(multibody_handle) {
-            //println!("multibody num links {:?} num dof {:?}",
-            //         multibody.num_links(),
-            //         multibody.ndofs()
-            //);
-            //println!("0 {:?} 1 {:?}  2 {:?} ",
-            //         bodies.get(multibody.link(0).unwrap().rigid_body_handle()).unwrap().is_rotation_locked(),
-            //         bodies.get(multibody.link(1).unwrap().rigid_body_handle()).unwrap().is_rotation_locked(),
-            //         bodies.get(multibody.link(2).unwrap().rigid_body_handle()).unwrap().is_rotation_locked()
-            //);
-            multibody.apply_displacements(joint_angles);
-            multibody.forward_kinematics(&bodies,false);
-            multibody.update_rigid_bodies(bodies,false);
-        }
-
-        return *bodies.get(ee_link)
-            .expect("ee_link not found in bodies.")
-            .position()
+    pub struct EEKinematicModel {
+        bodies: RigidBodySet,
+        multibody_joints: MultibodyJointSet,
+        ee_link_handle: RigidBodyHandle,
+        ee_joint_handle: MultibodyJointHandle
     }
     
-    pub fn inv_kin(bodies: &mut RigidBodySet,
-                   joints: &mut MultibodyJointSet,
-                   multibody_handle: MultibodyJointHandle,
-                   ee_pose: Isometry<f32>
-    ) -> DVector<f32> {
-        let mut displacements = DVector::zeros(0);
-        if let Some((multibody, link_id)) = joints.get_mut(multibody_handle) {
-            displacements = DVector::zeros(multibody.ndofs());
+    impl EEKinematicModel {
+        pub fn from_urdf(urdf_path: &Path, ee_name: &str) -> EEKinematicModel {
+            let urdf_options = UrdfLoaderOptions {
+                create_colliders_from_collision_shapes: false,
+                create_colliders_from_visual_shapes: false,
+                apply_imported_mass_props: true,
+                make_roots_fixed: true,
+                ..Default::default()
+            };
+            let result = UrdfRobot::from_file(urdf_path, urdf_options, None);
+            let (mut robot, xrobot) = match result {
+                Ok(val) => val,
+                Err(err) => panic!("Error in URDF loading {}", err),
+            };
+   
+            let mut bodies = RigidBodySet::new();
+            let mut multibody_joints = MultibodyJointSet::new();
+            let mut colliders = ColliderSet::new();
+            
+            let handles = robot.insert_using_multibody_joints(&mut bodies, &mut colliders, &mut multibody_joints, UrdfMultibodyOptions::DISABLE_SELF_CONTACTS);
 
+            let ee_index_result = xrobot.links.iter().position(|el| el.name == ee_name);
+            let ee_index = match ee_index_result {
+                Some(val) => val,
+                None => {
+                    let avail_names:Vec<String> = xrobot.links.iter().map(|e| e.name.clone()).collect();
+                    panic!("Error finding ee_link {}, available names are {}",
+                           ee_name, avail_names.join(", "));
+            }
+            };
+                
+            let ee_link_handle = handles.links[ee_index].body;
+            let (_, _, ee_joint_handle) = multibody_joints.attached_joints(ee_link_handle).last().unwrap();
+
+            let (mut multibody, ee_link_id) = multibody_joints.get_mut(ee_joint_handle).unwrap();
+            multibody.forward_kinematics(&mut bodies, false); // Needed so that the extra DOF in root are removed
+
+            EEKinematicModel {
+                bodies: bodies,
+                multibody_joints: multibody_joints,
+                ee_link_handle: ee_link_handle,
+                ee_joint_handle: ee_joint_handle,
+            }
+        }
+        
+        pub fn fwd_kin(&mut self, joint_angles: &[f32]) -> Isometry<f32> {
+            let (mut multibody, link_id) = self.multibody_joints.get_mut(self.ee_joint_handle).unwrap();
+            
+            multibody.apply_displacements(joint_angles);
+            multibody.forward_kinematics(&self.bodies, false);
+            multibody.update_rigid_bodies(&mut self.bodies, false);
+            
+            return *self.bodies.get(self.ee_link_handle)
+                .expect("ee_link not found in bodies.")
+                .position()
+        }
+        
+        pub fn inv_kin(&mut self, ee_pose: Isometry<f32>) -> DVector<f32> {
+            let (mut multibody, link_id) = self.multibody_joints.get_mut(self.ee_joint_handle).unwrap();
+
+            let mut displacements = DVector::zeros(0);
+            displacements = DVector::zeros(multibody.ndofs());
+            
             let options = InverseKinematicsOption {
                 ..Default::default()
             };
             
             multibody.inverse_kinematics(
-                &bodies,
+                &self.bodies,
                 link_id,
                 &options,
                 &ee_pose,
-                |_| true,
+                |lk| !lk.is_root(),
                 &mut displacements
             );
-        }
-        return displacements
-    }    
+            
+            return displacements
+        }    
+        
+    }
+    
 
     #[cfg(test)]
     mod tests {

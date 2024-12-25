@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 rapier3d = { version = "*", features =  [ ] }
+rapier3d-urdf = "0.3.0"
 
 #[[bin]]
 #  name = "rapier3d_example"
