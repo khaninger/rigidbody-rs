@@ -11,8 +11,7 @@ fn main() {
     let mut multibody_joints = MultibodyJointSet::new();
     let mut colliders = ColliderSet::new();
 
-    let urdf_path = Path::new("assets/fr3.urdf");
-    let mut rob = EEKinematicModel::from_urdf(urdf_path, "test");
+    let mut rob = EEKinematicModel::from_urdf(Path::new("assets/fr3.urdf"), "fr3_link8");
     
     let ee_pose_zero = rob.fwd_kin(&[0.0; 7]);
     println!("ee_pose_zero: {:?}", ee_pose_zero);
@@ -25,6 +24,4 @@ fn main() {
 
     let ee_pose = rob.fwd_kin(jt_angles.as_slice());
     println!("ee_pose:     {:?}", ee_pose);
-
-
 }

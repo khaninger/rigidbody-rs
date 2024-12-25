@@ -19,13 +19,10 @@ pub mod kinematics{
                 make_roots_fixed: true,
                 ..Default::default()
             };
-
             let result = UrdfRobot::from_file(urdf_path, urdf_options, None);
             let (mut robot, xrobot) = match result {
                 Ok(val) => val,
-                Err(err) => {
-                    panic!("Error in URDF loading {}", err);
-                }
+                Err(err) => panic!("Error in URDF loading {}", err),
             };
    
             let mut bodies = RigidBodySet::new();
@@ -34,10 +31,20 @@ pub mod kinematics{
             
             let handles = robot.insert_using_multibody_joints(&mut bodies, &mut colliders, &mut multibody_joints, UrdfMultibodyOptions::DISABLE_SELF_CONTACTS);
 
-            let ee_link_handle = handles.links[16].body;
+            let ee_index_result = xrobot.links.iter().position(|el| el.name == ee_name);
+            let ee_index = match ee_index_result {
+                Some(val) => val,
+                None => {
+                    let avail_names:Vec<String> = xrobot.links.iter().map(|e| e.name.clone()).collect();
+                    panic!("Error finding ee_link {}, available names are {}",
+                           ee_name, avail_names.join(", "));
+            }
+            };
+                
+            let ee_link_handle = handles.links[ee_index].body;
             let (_, _, ee_joint_handle) = multibody_joints.attached_joints(ee_link_handle).last().unwrap();
-            let (mut multibody, ee_link_id) = multibody_joints.get_mut(ee_joint_handle).unwrap();
 
+            let (mut multibody, ee_link_id) = multibody_joints.get_mut(ee_joint_handle).unwrap();
             multibody.forward_kinematics(&mut bodies, false); // Needed so that the extra DOF in root are removed
 
             EEKinematicModel {
