@@ -60,11 +60,9 @@ pub mod kinematics{
                 .position()
         }
         
-        pub fn inv_kin(bodies: &mut RigidBodySet,
-                       multibody: &mut Multibody,
-                       link_id: usize,
-                       ee_pose: Isometry<f32>
-        ) -> DVector<f32> {
+        pub fn inv_kin(&mut self, ee_pose: Isometry<f32>) -> DVector<f32> {
+            let (mut multibody, link_id) = self.multibody_joints.get_mut(self.ee_joint_handle).unwrap();
+
             let mut displacements = DVector::zeros(0);
             displacements = DVector::zeros(multibody.ndofs());
             
@@ -73,7 +71,7 @@ pub mod kinematics{
             };
             
             multibody.inverse_kinematics(
-                &bodies,
+                &self.bodies,
                 link_id,
                 &options,
                 &ee_pose,

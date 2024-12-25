@@ -20,15 +20,11 @@ fn main() {
     let ee_pose_ones = rob.fwd_kin(&[1.0; 7]);
     println!("ee_pose_ones: {:?}", ee_pose_ones);
     
-    //let jt_angles = inv_kin(&mut bodies,
-    //                        &mut multibody,
-    //                        link_id,
-    //                        Isometry::translation(0.5,0.0,0.5)
-    //);
-    //println!("jt angles:   {:?}", jt_angles);
+    let jt_angles = rob.inv_kin(Isometry::translation(0.5,0.0,0.5));
+    println!("jt angles:   {:?}", jt_angles);
 
-    //let ee_pose = rob.fwd_kin(jt_angles.as_slice());
-    //println!("ee_pose:     {:?}", ee_pose);
+    let ee_pose = rob.fwd_kin(jt_angles.as_slice());
+    println!("ee_pose:     {:?}", ee_pose);
 
 
 }
