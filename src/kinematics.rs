@@ -2,15 +2,32 @@ pub mod kinematics{
     use std::path::Path;
     use rapier3d::prelude::*;
     use rapier3d_urdf::{UrdfRobot, UrdfLoaderOptions, UrdfMultibodyOptions};
-    
+
+    /* Notes on the insane data structures of rapier:
+    - RigidBody (positions, mass properties, vels, collision info)
+    - MultibodyJoint (type, coordinates, joint rotation)
+    - MultibodyLink
+    -> internal_id, parent_internal_id
+    -> rigid_body: RigidBodyHandle
+    -> joint: MultibodyJoint
+    - RigidBodySet
+    -> bodies: Arena<RigidBody>
+    - MultibodyJointSet
+    -> multibodies Arena<Multibody>
+    -> rb2mb Coarena<MultibodyLinkId>
+    - Multibody
+    -> links: MultibodyLinkVec
+    -> lots of private variables
+    */
+
     pub struct EEKinematicModel {
-        bodies: RigidBodySet,
-        multibody_joints: MultibodyJointSet,
-        ee_link_handle: RigidBodyHandle,
-        ee_joint_handle: MultibodyJointHandle
+        pub bodies: RigidBodySet,
+        pub multibody_joints: MultibodyJointSet,
+        pub ee_link_handle: RigidBodyHandle,
+        pub ee_joint_handle: MultibodyJointHandle,
     }
     
-    impl EEKinematicModel {
+    impl EEKinematicModel {        
         pub fn from_urdf(urdf_path: &Path, ee_name: &str) -> EEKinematicModel {
             let urdf_options = UrdfLoaderOptions {
                 create_colliders_from_collision_shapes: false,
@@ -24,7 +41,7 @@ pub mod kinematics{
                 Ok(val) => val,
                 Err(err) => panic!("Error in URDF loading {}", err),
             };
-   
+
             let mut bodies = RigidBodySet::new();
             let mut multibody_joints = MultibodyJointSet::new();
             let mut colliders = ColliderSet::new();
@@ -38,7 +55,7 @@ pub mod kinematics{
                     let avail_names:Vec<String> = xrobot.links.iter().map(|e| e.name.clone()).collect();
                     panic!("Error finding ee_link {}, available names are {}",
                            ee_name, avail_names.join(", "));
-            }
+                }
             };
                 
             let ee_link_handle = handles.links[ee_index].body;
@@ -87,8 +104,7 @@ pub mod kinematics{
             );
             
             return displacements
-        }    
-        
+        }        
     }
     
 
@@ -98,31 +114,24 @@ pub mod kinematics{
         
         #[test]
         fn fwd_kin_test(){
-            let mut bodies = RigidBodySet::new();
-            let mut multibody_joints = MultibodyJointSet::new();
+            let mut rob = EEKinematicModel::from_urdf(Path::new("assets/fr3.urdf"), "fr3_link8");
+            
+            let ee_pose_zero = rob.fwd_kin(&[0.0; 7]);
+            println!("ee_pose_zero: {:?}", ee_pose_zero);
+            
+            let ee_pose_ones = rob.fwd_kin(&[1.0; 7]);
+            println!("ee_pose_ones: {:?}", ee_pose_ones);
+        }
 
-            let world = bodies.insert(RigidBodyBuilder::fixed());
-            let rigid_body_1 = bodies.insert(RigidBodyBuilder::dynamic());    
-            let rigid_body_2 = bodies.insert(RigidBodyBuilder::dynamic());
+        #[test]
+        fn inv_kin_test(){
+            let mut rob = EEKinematicModel::from_urdf(Path::new("assets/fr3.urdf"), "fr3_link8");
+            
+            let jt_angles = rob.inv_kin(Isometry::translation(0.5,0.0,0.5));
+            println!("jt angles:   {:?}", jt_angles);
 
-            let jt_world = RevoluteJointBuilder::new(Vector::x_axis())
-                .local_anchor1(point![0., 0., 0.1])
-                .local_anchor2(point![0., 0., 0.])
-                .build();
-            let jt_1 = RevoluteJointBuilder::new(Vector::x_axis())
-                .local_anchor1(point![0., 0., 0.1])
-                .local_anchor2(point![0., 0., 0.0])
-                .build();
-
-            multibody_joints.insert(world, rigid_body_1, jt_world, true);
-            let multibody = multibody_joints.insert(rigid_body_1, rigid_body_2, jt_1, true).unwrap();
-
-            let ee_pose = fwd_kin(&mut bodies,
-                                  &mut multibody_joints,
-                                  multibody,
-                                  rigid_body_2,
-                                  &vec![0.2,0.3,1.,1.,1.,1.,0.3,0.4]);
-            println!("ee_pose: {:?}", ee_pose);
+            let ee_pose = rob.fwd_kin(jt_angles.as_slice());
+            println!("ee_pose:     {:?}", ee_pose);
 
         }
     }
