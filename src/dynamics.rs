@@ -2,7 +2,7 @@ pub mod dynamics{
     use std::iter::zip;
     use std::ops::{Deref, DerefMut};
     use std::path::Path;
-    use nalgebra::{convert, Const, OPoint, UnitVector3};
+    use nalgebra::{convert, OPoint, UnitVector3, Vector3, U3};
     use rapier3d::prelude::*;
     use rapier3d_urdf::{UrdfRobot, UrdfLoaderOptions, UrdfMultibodyOptions};
 
@@ -13,7 +13,7 @@ pub mod dynamics{
 
 
     fn xurdf_to_massproperties(link: &Link) -> MassProperties {
-        let local_com:OPoint<f32, Const<3>> = OPoint::<f32, Const<3>>::new(
+        let local_com:OPoint<f32, U3> = OPoint::<f32, U3>::new(
             link.inertial.origin.xyz[0] as f32,
             link.inertial.origin.xyz[1] as f32,
             link.inertial.origin.xyz[2] as f32
@@ -41,7 +41,10 @@ pub mod dynamics{
         joint: RevoluteJoint, //MultibodyJoint,
     }
     
-       // We re-implement b/c too many attributes are private
+
+    // TODO: implement transforms on these? (2.24 && 2.25)
+    
+    
     pub struct MultibodyLinkVec(pub Vec<MultibodyLink>);
 
     impl Deref for MultibodyLinkVec {
@@ -108,10 +111,45 @@ pub mod dynamics{
             
             mb_link_vec          
             
-        }
+        }        
+        
+        pub fn rnea(&self, q: &[f32],dq: &[f32], ddq: &[f32], tau: &mut &[f32]) {
+            // Table 5.1
+            //let mut v = Vector::default();
+            let mut a = 0;
+            let mut f = 0;
 
+            //S = Vector6::new(0., 0., 1., 0., 0., 0);                
+            
+            // Relevant functions:
+            // multibody_joint::jacobian(&self, transform: &Rotation<Real>, out: &mut JacobianViewMut<real>)
+            // multibody_joint::jacobian_mul_coordinates(&self, acc: &[Real]) -> RigidBOdyVelocity
+            // Vector3::cross, Vector3::gcross_matrix_tr
+            // Matrix::gemm
+            // Isometry::inv and ::inv_mul
+            for (i, link) in self.iter().enumerate() {
+                //let sXp = Isometry::new(Vector3::default(),
+                //                        Vector3::z()*q[i]);      // Table 4.1
+                //let vJ = Vector6::new(0., 0., q[i], 0., 0., 0.); // (3.33)
+                //let cJ = Vector6::zeros(); // (3.42 & 3.43, no rate of change 
+
+                
+                
+                //v = Xj*v + vj;
+                //a = Xj*a + Si*ddq[i] + cj + vi.gcross_matrix()*vj
+                //let I = link.rigid_body.reconstruct_inertia_matrix();
+                //f[i] = I*a + v.gcross_matrix()*I*v-Xj*f;
+            }
+            for (i, link) in self.iter().rev().enumerate() {
+                //tau[i] = Si.transpose()*f;
+                //f = f[i] + Xj.transpose()*f
+            }
+
+            ()
+            //v.as_slice()
+        }
+        
         pub fn inertia_matrix(&self, q: &[f32]) -> DMatrix<Real> {
-            // Needs body_jacobians and rigid_bodies
             let mut augmented_mass = DMatrix::zeros(7, 7);
             let mut i = 0;
             for link in self.iter() {
