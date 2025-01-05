@@ -10,7 +10,7 @@ pub mod dynamics{
     use parry3d::mass_properties::MassProperties;
     
     use crate::kinematics::kinematics::EEKinematicModel;
-
+    use crate::{SpatialVelocity, BodyJacobian};
 
     fn xurdf_to_massproperties(link: &Link) -> MassProperties {
         let local_com:OPoint<f32, U3> = OPoint::<f32, U3>::new(
@@ -113,13 +113,16 @@ pub mod dynamics{
             
         }        
         
-        pub fn rnea(&self, q: &[f32],dq: &[f32], ddq: &[f32], tau: &mut &[f32]) {
+        pub fn rnea(&self, q: &[f32],dq: &[f32], ddq: &[f32]) -> SpatialVelocity {
             // Table 5.1
-            //let mut v = Vector::default();
-            let mut a = 0;
+            let mut v = SpatialVelocity::new();
+            let mut a = SpatialVelocity::new();
             let mut f = 0;
 
-            //S = Vector6::new(0., 0., 1., 0., 0., 0);                
+            let mut tr_link_to_world = Isometry::identity();
+            
+
+         
             
             // Relevant functions:
             // multibody_joint::jacobian(&self, transform: &Rotation<Real>, out: &mut JacobianViewMut<real>)
@@ -128,15 +131,20 @@ pub mod dynamics{
             // Matrix::gemm
             // Isometry::inv and ::inv_mul
             for (i, link) in self.iter().enumerate() {
-                //let sXp = Isometry::new(Vector3::default(),
-                //                        Vector3::z()*q[i]);      // Table 4.1
-                //let vJ = Vector6::new(0., 0., q[i], 0., 0., 0.); // (3.33)
-                //let cJ = Vector6::zeros(); // (3.42 & 3.43, no rate of change 
 
-                
-                
-                //v = Xj*v + vj;
-                //a = Xj*a + Si*ddq[i] + cj + vi.gcross_matrix()*vj
+                // Local joint transformation and velocity
+                let tr_joint = Isometry::new(Vector3::default(),
+                                             Vector3::z()*q[i]);      // XJ, Table 4.1
+                let body_jac = BodyJacobian::revolute_z(); // S, assume all jts are revolute about z
+                let vel_joint = body_jac*dq[i];  // vJ, (3.33)
+                let cJ = SpatialVelocity::new(); // (3.42 & 3.43, no rate of change 
+
+                let tr_child_to_parent = tr_joint; //TODO
+                let tr_child_to_world = tr_child_to_parent*tr_link_to_world;
+
+                v = tr_child_to_parent*v + vel_joint; 
+                let body_jac = BodyJacobian::revolute_z(); // S, assume all jts are revolute about z
+                a = tr_child_to_parent*a + body_jac*ddq[i] + cJ; // + v.cross(vel_joint);
                 //let I = link.rigid_body.reconstruct_inertia_matrix();
                 //f[i] = I*a + v.gcross_matrix()*I*v-Xj*f;
             }
@@ -145,8 +153,7 @@ pub mod dynamics{
                 //f = f[i] + Xj.transpose()*f
             }
 
-            ()
-            //v.as_slice()
+            v
         }
         
         pub fn inertia_matrix(&self, q: &[f32]) -> DMatrix<Real> {

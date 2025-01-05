@@ -24,8 +24,10 @@ fn main() {
     let T: Isometry3<f32> = Isometry3::identity();
 
     let sv = SpatialVelocity { lin: v, rot: v2 };
-    println!("{:?}", sv);
-    println!("{:?}", T*sv);
+
+    //println!("{:?}", T.translation.vector.cross(&v));
+    //println!("{:?}", sv);
+    //println!("{:?}", T*sv);
 
     
     //println!("{:?}", T.transform_vector(&v));
@@ -33,6 +35,8 @@ fn main() {
     //println!("{:?}", v.shape());
 
 
-    //let mut rob = MultibodyLinkVec::from_urdf(Path::new("assets/fr3.urdf"), "fr3_link8");
+    let mut rob = MultibodyLinkVec::from_urdf(Path::new("assets/fr3.urdf"), "fr3_link8");
     //println!("inertia mat: {:?}", rob.inertia_matrix(&[0.0; 7]));
+    let res = rob.rnea(&[0.1; 17], &[0.2; 17], &[0.3; 17]);
+    println!("rnea: {:?}", res);
 }
