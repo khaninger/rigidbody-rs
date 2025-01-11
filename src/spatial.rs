@@ -37,6 +37,7 @@ impl SpatialVelocity {
         }
     }
 
+    ///Cross product with another spatial velocity
     pub fn cross(&self, other: &SpatialVelocity) -> SpatialVelocity {
         SpatialVelocity {
             lin: self.lin.cross(&other.rot) + other.lin.cross(&self.rot),

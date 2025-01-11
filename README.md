@@ -47,3 +47,10 @@ Rapier has a great physics engine, but has high complexity to support arbitrary 
 Additionally, the forward dynamics essentially closed, and inverse dynamics not exposed over an interface. 
 
 
+## Library short intro
+
+### Kinematics
+We use Rust's lifetime system to allow us to check the validity of transformations at compile time.
+
+That is, a relative pose contains a reference to its parent coordinate system. If the parent coordinate system is out of scope, this is (conservatively) estimate from the lifetime.
+

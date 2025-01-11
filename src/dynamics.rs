@@ -103,11 +103,15 @@ pub mod dynamics{
             
             let mut mb_link_vec = MultibodyLinkVec::new();
             for (joint, link) in zip(xrobot.joints.iter(), xrobot.links.iter()) {
-                mb_link_vec.push( MultibodyLink {
-                    rigid_body: xurdf_to_massproperties(link),
-                    joint: xurdf_joint_to_revolute(joint)
-                });
+                if !link.name.contains("sc") {
+                    mb_link_vec.push( MultibodyLink {
+                        rigid_body: xurdf_to_massproperties(link),
+                        joint: xurdf_joint_to_revolute(joint)
+                    });
+                }
             }
+
+            println!("Have {:?} rb links", mb_link_vec.len());
             
             mb_link_vec          
             
