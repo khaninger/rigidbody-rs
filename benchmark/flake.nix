@@ -28,7 +28,8 @@
     in
       {
         packages.${system}.default = benchmark;
-        devShells.${system} = {        
+        apps.${system}.default = {type = "app"; program="${benchmark}/bin/kinematics";};
+        devShells = {        
           default = pkgs.mkShell {
             packages = [
               benchmark
