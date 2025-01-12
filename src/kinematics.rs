@@ -1,4 +1,4 @@
-pub mod kinematics{
+/*pub mod kinematics{
     use std::path::Path;
     use rapier3d::prelude::*;
     use rapier3d_urdf::{UrdfRobot, UrdfLoaderOptions, UrdfMultibodyOptions};
@@ -137,3 +137,4 @@ pub mod kinematics{
     }
 
 }
+*/

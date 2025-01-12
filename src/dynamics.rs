@@ -1,4 +1,4 @@
-pub mod dynamics{
+/*pub mod dynamics{
     use std::iter::zip;
     use std::ops::{Deref, DerefMut};
     use std::path::Path;
@@ -195,3 +195,4 @@ pub mod dynamics{
         }
     }
 }
+*/
