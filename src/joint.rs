@@ -41,8 +41,10 @@ impl <'b> RevoluteJoint<'b> {
                            child: &RelativeTransform
     ) -> RelativeTransform {
         //assert!(*child.coord_frame == self.child, "Child argument is not expressed in correct coordinate system");
-        let jt_transform = Transform { rotation: UnitQuaternion::from_scaled_axis(self.axis.scale(q)),
-                                       translation: Translation3::identity() };
+        let jt_transform = Transform {
+            rotation: UnitQuaternion::from_scaled_axis(self.axis.scale(q)),
+            translation: Translation3::identity()
+        };
         RelativeTransform {
             coord_frame: &self.parent.coord_frame,
             pose: self.parent.pose*jt_transform*child.pose

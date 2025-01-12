@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 nalgebra = "0.33.2"
 parry3d = "0.17.4"
-rapier3d = { version = "*", features =  [ ] }
+rapier3d = "0.22.0"
 rapier3d-urdf = "0.3.0"
 xurdf = "0.2.5"
 

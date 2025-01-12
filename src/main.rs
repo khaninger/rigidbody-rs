@@ -11,11 +11,12 @@ use xurdf::{Robot, Link, Joint, parse_urdf_from_file};
 
 mod spatial;
 mod joint;
+mod kinematics;
 
 use spatial::*;
 use joint::*;
 /*
-mod kinematics;
+
 mod dynamics;
 use kinematics::kinematics::EEKinematicModel;
 use dynamics::dynamics::MultibodyLinkVec;
@@ -110,7 +111,7 @@ fn main() {
     let mut prev_frame:Coord = Coord::WORLD;
     
     for (joint, link) in zip(robot.joints.iter(), robot.links.iter()) {
-        if !link.name.contains("sc") {
+        if !link.name.contains("sc") && !link.name.contains("0") {
             let rev_joint = RevoluteJoint::from_xurdf_joint(joint, &prev_frame);
             //prev_frame = Coord::FIXED(rev_joint.child);
  
@@ -118,14 +119,27 @@ fn main() {
         }
     }
     println!("Xurdf Joints: {:?}, Xurdf Links: {:?}, Proc Joints: {:?}", robot.joints.len(), robot.links.len(), jts.len());
+
+    let mut ee = RelativeTransform{coord_frame: &prev_frame, pose: Isometry3::<Real>::identity()};
+    for jt in jts.iter().rev() {
+        ee = jt.child_to_parent(1., &ee);
+    }
+
+    println!("EE Pose in world, ones {:?}", ee.pose);
         
     let mut ee = RelativeTransform{coord_frame: &prev_frame, pose: Isometry3::<Real>::identity()};
-    
     for jt in jts.iter().rev() {
         ee = jt.child_to_parent(0., &ee);
     }
 
-    println!("EE Pose in world {:?}", ee.pose);
+    println!("EE Pose in world, zeros {:?}", ee.pose);
     
+
+    let mut ee = RelativeTransform{coord_frame: &prev_frame, pose: Isometry3::<Real>::identity()};
+    for jt in jts.iter().rev() {
+        ee = jt.child_to_parent(-1., &ee);
+    }
+
+    println!("EE Pose in world, -ones {:?}", ee.pose);
 
 }
