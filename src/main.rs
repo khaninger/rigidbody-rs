@@ -1,66 +1,18 @@
-#![allow(warnings)]
+#![allow(warnings)] // Suppress warning message on compile
 use std::path::Path;
 use std::iter::zip;
 
-//use rapier3d::prelude::*;
-//use rapier3d_urdf::{UrdfRobot, UrdfLoaderOptions, UrdfMultibodyOptions};
-//use rapier3d::pipeline::PhysicsPipeline;
-
-use nalgebra::{Isometry3, IsometryMatrix3, Point3, Translation3, Unit, UnitQuaternion, Vector3};
+use nalgebra::{Isometry3, IsometryMatrix3, Matrix3, Point3, OPoint, Translation3, Unit, UnitQuaternion, Vector3, U3};
 use xurdf::{Robot, Link, Joint, parse_urdf_from_file};
+use parry3d::mass_properties::MassProperties;
 
 mod spatial;
 mod joint;
-mod kinematics;
+mod dynamics;
 
 use spatial::*;
 use joint::*;
-/*
-
-mod dynamics;
-use kinematics::kinematics::EEKinematicModel;
-use dynamics::dynamics::MultibodyLinkVec;
-
-fn cross() {
-    let v = Vector3::new(0., 1., 2.);
-    let p = Point3::new(2, 3, 4);
-    let v2 = Vector3::new(1., 2., 3.);
-    let r = v.cross(&v2);
-    
-    let T: Isometry3<f32> = Isometry3::identity();
-    
-    //let sv = SpatialVelocity { lin: v, rot: v2 };
-
-    //println!("{:?}", T.translation.vector.cross(&v));
-    //println!("{:?}", sv);
-    //println!("{:?}", T*sv);
-
-    
-    //println!("{:?}", T.transform_vector(&v));
-    //println!("{:?}", T.rotation*v);
-    //println!("{:?}", v.shape());
-
-}
-
-fn rnea() {
-    let mut rob = MultibodyLinkVec::from_urdf(Path::new("assets/fr3.urdf"), "fr3_link8");
-    //println!("inertia mat: {:?}", rob.inertia_matrix(&[0.0; 7]));
-    let res = rob.rnea(&[0.1; 9], &[0.2; 9], &[0.3; 9]);
-    println!("rnea: {:?}", res);
-}
-*/
-fn relative_trans() {
-    let local = Transform {
-        rotation: UnitQuaternion::identity(),
-        //rotation: UnitQuaternion::from_scaled_axis(Vector3::new(std::f32::consts::PI, 0., 0.)),
-        translation: Translation3::new(0.,0.,1.0)
-    };
-
-    let pt = RelativeTransform { coord_frame: &Coord::WORLD, pose: local };
-    
-    println!("pt {:?}", pt);
-//    println!("pt in world {:?}", pt.to_world());
-}
+use dynamics::*;
 
 fn joint() {
     let jt1 = RevoluteJoint{
@@ -72,7 +24,12 @@ fn joint() {
                 translation: Translation3::new(1.,0.,0.)
             }
         },
-        child: Isometry3::identity()            
+        child: Isometry3::identity(),
+        child_mass: MassProperties::new(
+            OPoint::<f32, U3>::new(0., 0., 0.),
+            0.5,
+            Vector3::<f32>::new(1.,1.,1.)
+        ),            
     };
     let jt2 = RevoluteJoint{
         axis: Unit::new_normalize(Vector3::z()),
@@ -83,7 +40,12 @@ fn joint() {
                 translation: Translation3::new(1.,0.,0.)
             }
         },
-        child: Isometry3::identity()
+        child: Isometry3::identity(),
+        child_mass: MassProperties::new(
+            OPoint::<f32, U3>::new(0., 0., 0.),
+            0.5,
+            Vector3::<f32>::new(1.,1.,1.)
+        )
     };
     
     let child_pt = RelativeTransform {
@@ -104,7 +66,8 @@ fn joint() {
     println!("pt in world {:?}", child_pt_in_world.pose);
 }
 
-fn main() {
+fn urdf() {
+    
     let robot = parse_urdf_from_file(Path::new("assets/fr3.urdf")).unwrap();
 
     let mut jts = Vec::<RevoluteJoint>::new();
@@ -141,5 +104,50 @@ fn main() {
     }
 
     println!("EE Pose in world, -ones {:?}", ee.pose);
+}
 
+pub fn rnea() {
+    let q = &[0.1; 9];
+    let dq = &[0.; 9];
+    let ddq = &[0.; 9];
+    
+    let jts:Vec<RevoluteJoint> = Vec::new();
+    let mut v = SpatialVelocity::new();
+    let mut a = SpatialVelocity::new();
+    let mut f = 0;
+
+    let mut tr_link_to_world = Isometry::identity();
+
+
+    // need transform into parent 2x, the inverse of that 1x 
+    for (i, link) in jts.iter().enumerate() {
+
+        // Local joint transformation and velocity
+        let tr_joint = Isometry::new(Vector3::default(),
+                                     Vector3::z()*q[i]);      // XJ, Table 4.1
+        let body_jac = BodyJacobian::revolute_z(); // S, assume all jts are revolute about z
+        let vel_joint = body_jac*dq[i];  // vJ, (3.33)
+        let cJ = SpatialVelocity::new(); // (3.42 & 3.43, no rate of change 
+
+        let tr_child_to_parent = tr_joint; //TODO
+        let tr_child_to_world = tr_child_to_parent*tr_link_to_world;
+
+        v = tr_child_to_parent*v + vel_joint; 
+        let body_jac = BodyJacobian::revolute_z(); // S, assume all jts are revolute about z
+        a = tr_child_to_parent*a + body_jac*ddq[i] + cJ; // + v.cross(vel_joint);
+        //let I = link.rigid_body.reconstruct_inertia_matrix();
+        //f[i] = I*a + v.gcross_matrix()*I*v-Xj*f;
+    }
+    for (i, link) in self.iter().rev().enumerate() {
+        //tau[i] = Si.transpose()*f;
+        //f = f[i] + Xj.transpose()*f
+    }
+
+
+    
+}
+
+fn main() {
+    joint();
+    //urdf();
 }

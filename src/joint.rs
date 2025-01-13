@@ -1,17 +1,18 @@
 use nalgebra::{UnitVector3, Isometry3, Vector3, Translation3, Rotation3, UnitQuaternion, Unit, convert};
 use xurdf::{Link, Joint};
+use parry3d::mass_properties::MassProperties;
 
 pub type Real = f32;
 pub type Transform = Isometry3<Real>;
 //pub type Coord = Option<&Transform>; // None is in worldd, 
-
 
 /// Types of coordinate systems which can be expressed
 #[derive(Debug)]
 pub enum Coord<'a> {
     WORLD, // Reference coordinate system
     FIXED(Transform), // A fixed coordinate system relative to world
-    REL(RelativeTransform<'a>) // A coordinate system relative to another coordinate system
+    REL(RelativeTransform<'a>), // A coordinate system relative to another coordinate system
+    BODY(RigidBody) // A coordinate system attached to a body
 }
 
 /// A transform expressed in a coordinate system. 
@@ -21,17 +22,19 @@ pub struct RelativeTransform<'a> {
     pub pose: Transform
 }
 
-//impl <'a> RelativeTransform<'a>{
-//    pub fn to_world(&self) -> Transform {
-//        self.coord_frame.inv_mul(&self.pose)
-//    }
-//}
+#[derive(Debug)]
+pub struct RigidBody {
+    pub mass_props: MassProperties, // expressed in local coordinates
+    pub local_coord_frame: Transform, // are essentially arbitrary? But might need as reference       
+}
 
 /// An explicit revolute joint with a single degree of freedom
 pub struct RevoluteJoint<'a>  {
     pub axis: Unit<Vector3<Real>>, // Normed axis for the revolute joint
     pub parent: RelativeTransform<'a>, // Pose of joint coord system relative to parent
-    pub child: Transform // TODO: get rid of? Itś not 
+    // TODO: These two can be replaced with RigidBody?
+    pub child: Transform,
+    pub child_mass: MassProperties
 }
 
 impl <'b> RevoluteJoint<'b> {
@@ -64,7 +67,7 @@ impl <'b> RevoluteJoint<'b> {
                 ).scaled_axis()
             )
         };
-        RevoluteJoint{axis, parent, child:Isometry3::identity()}
+                RevoluteJoint{axis, parent, child:Isometry3::identity(), child_mass:MassProperties::default()}
     }
 }
 

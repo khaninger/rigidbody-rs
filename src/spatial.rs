@@ -1,5 +1,5 @@
 use std::ops::{Mul, Add};
-use nalgebra::{convert, OPoint, UnitVector3, Vector3, U3, Isometry3, Translation3};
+use nalgebra::{convert, OPoint, UnitVector3, Vector3, U3, Isometry3, Translation3, Point3};
 
 type Real = f32;
 type Transform = Isometry3<Real>;
@@ -86,11 +86,30 @@ impl BodyJacobian {
 //    rot: Vector3<Real>
 //}
 
-
-
-
 pub struct SpatialForce {
     lin: Vector3<Real>,
     rot: Vector3<Real>,
     //coord: &Transform
+}
+
+#[test]
+fn cross() {
+    let v = Vector3::new(0., 1., 2.);
+    let p = Point3::new(2, 3, 4);
+    let v2 = Vector3::new(1., 2., 3.);
+    let r = v.cross(&v2);
+    
+    let T: Isometry3<f32> = Isometry3::identity();
+    
+    //let sv = SpatialVelocity { lin: v, rot: v2 };
+
+    //println!("{:?}", T.translation.vector.cross(&v));
+    //println!("{:?}", sv);
+    //println!("{:?}", T*sv);
+
+    
+    //println!("{:?}", T.transform_vector(&v));
+    //println!("{:?}", T.rotation*v);
+    //println!("{:?}", v.shape());
+
 }
