@@ -8,7 +8,7 @@ type Transform = Isometry3<Real>;
     transforms: Vec<Isometry3>
 }*/
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct SpatialVelocity {
     pub lin: Vector3<Real>,
     pub rot: Vector3<Real>,
@@ -54,7 +54,15 @@ impl Mul<Real> for SpatialVelocity {
     type Output = SpatialVelocity;
 
     fn mul(self, a: Real) -> SpatialVelocity {
-        SpatialVelocity{lin: self.lin*a, rot: self.rot*a}
+        SpatialVelocity{lin: &self.lin*a, rot: &self.rot*a}
+    }
+}
+
+impl Mul<SpatialForce> for SpatialVelocity {
+    type Output = Real;
+
+    fn mul(self, f: SpatialForce) -> Real {
+        *(self.lin.transpose()*f.lin + self.rot.transpose()*f.rot).as_scalar()
     }
 }
 
@@ -81,14 +89,10 @@ impl BodyJacobian {
     }
 }
 
-//pub struct BodyJacobian {
-//    lin: Vector3<Real>,
-//    rot: Vector3<Real>
-//}
-
+#[derive(Debug, Default, Clone)]
 pub struct SpatialForce {
-    lin: Vector3<Real>,
-    rot: Vector3<Real>,
+    pub lin: Vector3<Real>,
+    pub rot: Vector3<Real>,
     //coord: &Transform
 }
 

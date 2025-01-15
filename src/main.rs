@@ -75,7 +75,7 @@ fn urdf() {
     
     for (joint, link) in zip(robot.joints.iter(), robot.links.iter()) {
         if !link.name.contains("sc") && !link.name.contains("0") {
-            let rev_joint = RevoluteJoint::from_xurdf_joint(joint, &prev_frame);
+            let rev_joint = RevoluteJoint::from_xurdf_joint(joint, link, &prev_frame);
             //prev_frame = Coord::FIXED(rev_joint.child);
  
             jts.push(rev_joint);
@@ -107,47 +107,63 @@ fn urdf() {
 }
 
 pub fn rnea() {
-    let q = &[0.1; 9];
-    let dq = &[0.; 9];
-    let ddq = &[0.; 9];
+
+    let robot = parse_urdf_from_file(Path::new("assets/fr3.urdf")).unwrap();
+
+    let mut jts = Vec::<RevoluteJoint>::new();
+    let mut prev_frame:Coord = Coord::WORLD;
     
-    let jts:Vec<RevoluteJoint> = Vec::new();
+    for (joint, link) in zip(robot.joints.iter(), robot.links.iter()) {
+        if !link.name.contains("sc") && !link.name.contains("0") {
+            let rev_joint = RevoluteJoint::from_xurdf_joint(joint, link, &prev_frame);
+            jts.push(rev_joint);
+        }
+    }
+
+    let q = &[0.1; 9];
+    let dq = &[0.2; 9];
+    let ddq = &[0.3; 9];
+
+    let mut tau = Vec::<Real>::new();
+    
     let mut v = SpatialVelocity::new();
     let mut a = SpatialVelocity::new();
-    let mut f = 0;
+    let mut f = Vec::<SpatialForce>::new();
 
-    let mut tr_link_to_world = Isometry::identity();
+    let mut tr_world_to_child = Isometry3::identity();
 
-
-    // need transform into parent 2x, the inverse of that 1x 
-    for (i, link) in jts.iter().enumerate() {
-
+    for (i, jt) in jts.iter().enumerate() {
         // Local joint transformation and velocity
-        let tr_joint = Isometry::new(Vector3::default(),
-                                     Vector3::z()*q[i]);      // XJ, Table 4.1
+        let tr_joint = jt.joint_transform(q[i]);   // X_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
         let body_jac = BodyJacobian::revolute_z(); // S, assume all jts are revolute about z
         let vel_joint = body_jac*dq[i];  // vJ, (3.33)
         let cJ = SpatialVelocity::new(); // (3.42 & 3.43, no rate of change 
 
-        let tr_child_to_parent = tr_joint; //TODO
-        let tr_child_to_world = tr_child_to_parent*tr_link_to_world;
+        tr_world_to_child = tr_joint*tr_world_to_child;
 
-        v = tr_child_to_parent*v + vel_joint; 
-        let body_jac = BodyJacobian::revolute_z(); // S, assume all jts are revolute about z
-        a = tr_child_to_parent*a + body_jac*ddq[i] + cJ; // + v.cross(vel_joint);
-        //let I = link.rigid_body.reconstruct_inertia_matrix();
-        //f[i] = I*a + v.gcross_matrix()*I*v-Xj*f;
+        v = tr_joint*v + vel_joint;
+        let body_jac = BodyJacobian::revolute_z(); //TODO: make a borrow multiply so don't double init?
+        a = tr_joint*a + body_jac*ddq[i] + cJ; // + v.cross(vel_joint);
+        let I = jt.child_mass.reconstruct_inertia_matrix();
+        let fi = SpatialForce {
+            lin: a.lin*jt.child_mass.mass(),
+            rot: I*a.rot
+        };// + v.gcross_matrix()*I*v-Xj*f;
+
+        println!("jt mass: {:?}", jt.child_mass.mass());
+        f.push(fi); 
     }
-    for (i, link) in self.iter().rev().enumerate() {
-        //tau[i] = Si.transpose()*f;
+    for (i, link) in jts.iter().rev().enumerate() {
+        tau.push(BodyJacobian::revolute_z()*f[i].clone());
         //f = f[i] + Xj.transpose()*f
     }
-
-
     
+    println!("vel: {:?} \nacc: {:?}", v, a);
+    println!("tau: {:?}", tau);
 }
 
 fn main() {
-    joint();
+    //joint();
     //urdf();
+    rnea();
 }
