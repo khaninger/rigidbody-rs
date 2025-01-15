@@ -61,13 +61,13 @@ fn joint() {
     let child_pt_in_jt1 = jt2.child_to_parent(q2, &child_pt);
     let child_pt_in_world = jt1.child_to_parent(q1, &child_pt_in_jt1);
 
-    println!("pt in jt2 {:?}", child_pt.pose);
-    println!("pt in jt1 {:?}", child_pt_in_jt1.pose);
+    println!("pt in jt2   {:?}", child_pt.pose);
+    println!("pt in jt1   {:?}", child_pt_in_jt1.pose);
     println!("pt in world {:?}", child_pt_in_world.pose);
+
 }
 
 fn urdf() {
-    
     let robot = parse_urdf_from_file(Path::new("assets/fr3.urdf")).unwrap();
 
     let mut jts = Vec::<RevoluteJoint>::new();
@@ -122,12 +122,15 @@ pub fn rnea() {
 
     let q = &[0.1; 9];
     let dq = &[0.2; 9];
-    let ddq = &[0.3; 9];
+    let ddq = &[0.0; 9];
 
     let mut tau = Vec::<Real>::new();
     
     let mut v = SpatialVelocity::new();
-    let mut a = SpatialVelocity::new();
+    let mut a = SpatialVelocity {
+        lin: Vector3::<Real>::new(0., 0., -9.81),
+        rot: Vector3::<Real>::zeros()
+    };
     let mut f = Vec::<SpatialForce>::new();
 
     let mut tr_world_to_child = Isometry3::identity();
