@@ -62,6 +62,7 @@ impl <'b> RevoluteJoint<'b> {
         }
     }
 
+    /// Transform from child to parent
     pub fn joint_transform(&self, q: Real) -> Transform {
         let jt = Transform { rotation: UnitQuaternion::from_scaled_axis(self.axis.scale(q)),
                              translation: Translation3::identity() };
@@ -97,6 +98,7 @@ impl <'b> RevoluteJoint<'b> {
 
 #[test]
 fn joint() {
+    use crate::spatial::*;
     let jt1 = RevoluteJoint{
         axis: Unit::new_normalize(Vector3::z()),
         parent: RelativeTransform{
@@ -151,6 +153,12 @@ fn joint() {
     assert!(child_pt_in_world.pose.translation.vector.relative_eq(
         &Vector3::new(0., -1., 0.), eps, eps
     ));
+
+    let v = SpatialVelocity{ lin:Vector3::new(1.,0.,0.), rot:Vector3::new(1.,0.,0.)};
+    let child_to_parent = jt2.joint_transform(std::f32::consts::FRAC_PI_2);
+    let parent_to_child = child_to_parent.inverse();
+    println!("Vel in parent frame: {:?} \n        child frame: {:?}", v, parent_to_child*&v);
+    
 }
 /*
 #[test]
