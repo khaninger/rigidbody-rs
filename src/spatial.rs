@@ -4,20 +4,16 @@ use nalgebra::{convert, OPoint, UnitVector3, Vector3, U3, Isometry3, Translation
 type Real = f32;
 type Transform = Isometry3<Real>;
 
-/*pub struct IsometryGraph {
-    transforms: Vec<Isometry3>
-}*/
-
 #[derive(Debug, Default, Clone)]
 pub struct SpatialVelocity {
     pub lin: Vector3<Real>,
     pub rot: Vector3<Real>,
 }
 
-impl Mul<SpatialVelocity> for Transform {
+impl Mul<&SpatialVelocity> for Transform {
     type Output = SpatialVelocity;
 
-    fn mul(self, v: SpatialVelocity) -> SpatialVelocity {
+    fn mul(self, v: &SpatialVelocity) -> SpatialVelocity {
         v.transform(&self)
     }
 }
@@ -44,10 +40,6 @@ impl SpatialVelocity {
             rot: self.rot.cross(&other.rot)
         }
     }
-    
-    // dot?
-
-    // ring? (time derivative in global coords)
 }
 
 impl Mul<Real> for SpatialVelocity {
@@ -58,14 +50,6 @@ impl Mul<Real> for SpatialVelocity {
     }
 }
 
-impl Mul<SpatialForce> for SpatialVelocity {
-    type Output = Real;
-
-    fn mul(self, f: SpatialForce) -> Real {
-        *(self.lin.transpose()*f.lin + self.rot.transpose()*f.rot).as_scalar()
-    }
-}
-
 impl Add<SpatialVelocity> for SpatialVelocity {
     type Output = Self;
 
@@ -73,12 +57,15 @@ impl Add<SpatialVelocity> for SpatialVelocity {
         Self {lin: self.lin+other.lin, rot: self.rot+other.rot}
     }
 }
-    
-//impl Default for SpatialVelocity {
-//    fn default() -> Self {
-//       SpatialVelocity::new()
-//    }
-//f}
+
+
+impl Mul<&SpatialForce> for SpatialVelocity {
+    type Output = Real;
+
+    fn mul(self, f: &SpatialForce) -> Real {
+        *(self.lin.transpose()*&f.lin + self.rot.transpose()*&f.rot).as_scalar()
+    }
+}
 
 /// A body jacobian multiplied by a joint vel or acc yields a SpatialVelocity, hacky shortcut for now
 pub type BodyJacobian = SpatialVelocity;
@@ -93,27 +80,54 @@ impl BodyJacobian {
 pub struct SpatialForce {
     pub lin: Vector3<Real>,
     pub rot: Vector3<Real>,
-    //coord: &Transform
+
 }
 
 #[test]
-fn cross() {
-    let v = Vector3::new(0., 1., 2.);
-    let p = Point3::new(2, 3, 4);
+//TODO Not fully implemented/tested
+fn vel_cross() {
+    let v1 = Vector3::new(0., 0., 1.);
     let v2 = Vector3::new(1., 2., 3.);
-    let r = v.cross(&v2);
-    
     let T: Isometry3<f32> = Isometry3::identity();
     
-    //let sv = SpatialVelocity { lin: v, rot: v2 };
+    let sv1 = SpatialVelocity {
+        lin: Vector3::new(0., 0., 1.),
+        rot: Vector3::new(0., 0., 0.)
+    };
+    let sv2 = SpatialVelocity {
+        lin: Vector3::new(0., 1., 0.),
+        rot: Vector3::new(0., 0., 0.)
+    };
 
-    //println!("{:?}", T.translation.vector.cross(&v));
-    //println!("{:?}", sv);
-    //println!("{:?}", T*sv);
-
-    
-    //println!("{:?}", T.transform_vector(&v));
-    //println!("{:?}", T.rotation*v);
-    //println!("{:?}", v.shape());
-
+    //println!("{:?}", sv1.cross(&sv2));
 }
+
+#[test]
+fn vel_transform() {
+    use nalgebra::UnitQuaternion;
+    let v = SpatialVelocity{
+        lin: Vector3::new(0., 1., 0.),
+        rot: Vector3::new(1., 0., 0.)
+    };
+
+    // Translation
+    let X1 = Transform{
+        rotation: UnitQuaternion::identity(),
+        translation: Translation3::new(0., 1., 0.)
+    };
+    
+    let eps = 0.0001;
+    let v1 = X1*&v;
+    assert!(v1.lin.relative_eq(&Vector3::new(0., 1., 1.), eps, eps));
+    assert!(v1.rot.relative_eq(&v.rot, eps, eps));
+        
+    let X2 = Transform {
+        rotation: UnitQuaternion::from_axis_angle(&Vector3::z_axis(),
+                                                  std::f32::consts::FRAC_PI_2),
+        translation: Translation3::new(0.,0.,0.)
+    };
+    let v2 = X2*&v;
+    assert!(v2.lin.relative_eq(&Vector3::new(-1., 0., 0.), eps, eps));
+    assert!(v2.rot.relative_eq(&Vector3::new(0., 1., 0.), eps, eps));
+}
+ 
