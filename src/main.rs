@@ -9,6 +9,7 @@ use parry3d::mass_properties::MassProperties;
 mod spatial;
 mod joint;
 
+
 use spatial::*;
 use joint::*;
 
@@ -27,11 +28,15 @@ fn parse_urdf(path: &Path) -> [RevoluteJoint; 7] {
     jts.try_into().unwrap()
 }
 
+
+const body_jac: BodyJacobian = BodyJacobian::revolute_z();
+
 pub fn rnea() {
     let jts = parse_urdf(&Path::new("assets/fr3.urdf"));
-    let q = &[0.1; 7];
-    let dq = &[0.2; 7];
-    let ddq = &[0.1; 7];
+
+    let q = &[0.0; 7];
+    let dq = &[0.0; 7];
+    let ddq = &[0.0; 7];
 
     let mut tau = Vec::<Real>::new();
     
@@ -47,14 +52,12 @@ pub fn rnea() {
     for (i, jt) in jts.iter().enumerate() {
         // Local joint transformation and velocity
         let tr_joint = jt.joint_transform(q[i]);   // X_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
-        let body_jac = BodyJacobian::revolute_z(); // S, assume all jts are revolute about z
         let vel_joint = body_jac*dq[i];  // vJ, (3.33)
         let cJ = SpatialVelocity::new(); // (3.42 & 3.43, no rate of change 
 
         tr_world_to_child = tr_joint*tr_world_to_child;
 
         v = tr_joint*&v + vel_joint;
-        let body_jac = BodyJacobian::revolute_z(); //TODO: make a borrow multiply so don't double init?
         a = tr_joint*&a + body_jac*ddq[i] + cJ; // + v.cross(vel_joint);
         let I = jt.child_mass.reconstruct_inertia_matrix();
         let fi = SpatialForce {
@@ -62,9 +65,12 @@ pub fn rnea() {
             rot: I*a.rot
         };// + v.gcross_matrix()*I*v-Xj*f;
 
-        println!("jt {:?} mass: {:?}", i, jt.child_mass.mass());
+        //println!("jt {:?} mass: {:?}", i, jt.child_mass.mass());
+        println!("jt {:?} vel: {:?}", i, v);
         f.push(fi); 
     }
+    println!("world to ee: {:?}", tr_world_to_child);
+
     for (i, link) in jts.iter().rev().enumerate() {
         tau.push(BodyJacobian::revolute_z()*&f[i]);
         //f = f[i] + Xj.transpose()*f
@@ -75,15 +81,20 @@ pub fn rnea() {
     println!("tau: {:?}", tau);
 }
 
-/* Featherstone's transformation notation
-^BX_A denotes a transofrmation from A to B for a motion vector.
-^BX_A^* is the same transformation for forces, = ^BX_A^{-T}
-*/
+fn fwd_kin (q: &[Real; 7]) {
+    let jts = parse_urdf(&Path::new("assets/fr3.urdf"));
+
+    let mut tr = Transform::identity();
+    for (i, jt) in jts.iter().rev().enumerate() {
+        tr = jt.joint_transform(q[i])*tr;
+    }
+    println!("EE Pose in world, q: {:?}, tr: {:?}", q[0], tr);
+}
 
 fn main() {
-    //joint();
-    //urdf();
-    //rnea();
-
+    fwd_kin(&[1.; 7]);
+    fwd_kin(&[0.; 7]);
+    fwd_kin(&[-1.; 7]);
+//    rnea();
 }
 

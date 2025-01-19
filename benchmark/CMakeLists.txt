@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 find_package(pinocchio REQUIRED)
 
 add_executable(kinematics kinematics.cpp)
+add_executable(rnea rnea.cpp)
+
 target_link_libraries(kinematics PRIVATE pinocchio::pinocchio)
-install(TARGETS kinematics
+target_link_libraries(rnea PRIVATE pinocchio::pinocchio)
+install(TARGETS kinematics rnea
         RUNTIME DESTINATION bin)

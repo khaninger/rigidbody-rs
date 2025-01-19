@@ -58,7 +58,6 @@ impl Add<SpatialVelocity> for SpatialVelocity {
     }
 }
 
-
 impl Mul<&SpatialForce> for SpatialVelocity {
     type Output = Real;
 
@@ -71,7 +70,7 @@ impl Mul<&SpatialForce> for SpatialVelocity {
 pub type BodyJacobian = SpatialVelocity;
 
 impl BodyJacobian {
-    pub fn revolute_z() -> Self {
+    pub const fn revolute_z() -> Self {
         return BodyJacobian{lin: Vector3::new(0., 0., 1.), rot: Vector3::new(0.,0.,0.)}
     }
 }
