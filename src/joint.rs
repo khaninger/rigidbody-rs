@@ -58,15 +58,17 @@ impl <'b> RevoluteJoint<'b> {
         //assert!(*child.coord_frame == self.child, "Child argument is not expressed in correct coordinate system");
         RelativeTransform {
             coord_frame: &self.parent.coord_frame,
-            pose: self.joint_transform(q)*child.pose
+            pose: self.joint_transform(q).inverse()*child.pose
         }
     }
 
-    /// Transform from child to parent
+    /// Transform coordinate frame from parent to child
     pub fn joint_transform(&self, q: Real) -> Transform {
-        let jt = Transform { rotation: UnitQuaternion::from_scaled_axis(self.axis.scale(q)),
-                             translation: Translation3::identity() };
-        self.parent.pose*jt
+        let jt_rot = UnitQuaternion::from_scaled_axis(self.axis.scale(-q));
+        Transform{
+            translation: self.parent.pose.translation,
+            rotation: jt_rot*self.parent.pose.rotation
+        }
     }
     
     pub fn from_xurdf_joint(
@@ -81,7 +83,7 @@ impl <'b> RevoluteJoint<'b> {
                     joint.origin.rpy[0] as Real,
                     joint.origin.rpy[1] as Real,
                     joint.origin.rpy[2] as Real
-                ).scaled_axis()
+                ).transpose().scaled_axis()
             )
         };
         let local_com = OPoint::<Real, U3>::new(
@@ -131,7 +133,6 @@ fn joint() {
             Vector3::<f32>::new(1.,1.,1.)
         )
     };
-    
     let child_pt = RelativeTransform {
         coord_frame: &Coord::FIXED(jt2.child),
         pose: Transform{
@@ -140,11 +141,15 @@ fn joint() {
         }
     };
 
-    let q1 = std::f32::consts::PI;
+    let q1 = std::f32::consts::FRAC_PI_2;
     let q2 = std::f32::consts::FRAC_PI_2;
+
+    let world_to_ee = jt2.joint_transform(q2)*jt1.joint_transform(q1);
+    println!("jt1 trans {:?} jt2 trans {:?}", jt1.joint_transform(q1), jt2.joint_transform(q2));
+    
     let child_pt_in_jt1 = jt2.child_to_parent(q2, &child_pt);
     let child_pt_in_world = jt1.child_to_parent(q1, &child_pt_in_jt1);
-
+    println!("{:?}, {:?}", child_pt_in_jt1.pose, child_pt_in_world.pose);
     let eps = 0.00001;
     
     assert!(child_pt_in_jt1.pose.translation.vector.relative_eq(
@@ -157,9 +162,15 @@ fn joint() {
     let v = SpatialVelocity{ lin:Vector3::new(1.,0.,0.), rot:Vector3::new(1.,0.,0.)};
     let child_to_parent = jt2.joint_transform(std::f32::consts::FRAC_PI_2);
     let parent_to_child = child_to_parent.inverse();
-    println!("Vel in parent frame: {:?} \n        child frame: {:?}", v, parent_to_child*&v);
-    
+    println!("Vel in parent frame: {:?} \n        child frame: {:?}", v, parent_to_child*&v);    
 }
+
+#[test]
+fn test_rpy() {
+    let R = Rotation3::<Real>::from_euler_angles(0.,0.,std::f32::consts::FRAC_PI_2).transpose();
+    //println!("{}", R);
+}
+
 /*
 #[test]
 fn urdf() {   

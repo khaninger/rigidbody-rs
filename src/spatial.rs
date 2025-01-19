@@ -1,4 +1,4 @@
-use std::ops::{Mul, Add};
+use std::ops::{Mul, Add, AddAssign};
 use nalgebra::{convert, OPoint, UnitVector3, Vector3, U3, Isometry3, Translation3, Point3};
 
 type Real = f32;
@@ -71,18 +71,60 @@ pub type BodyJacobian = SpatialVelocity;
 
 impl BodyJacobian {
     pub const fn revolute_z() -> Self {
-        return BodyJacobian{lin: Vector3::new(0., 0., 1.), rot: Vector3::new(0.,0.,0.)}
+        return BodyJacobian{lin: Vector3::new(0., 0., 0.), rot: Vector3::new(0.,0.,1.)}
     }
+
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct SpatialForce {
     pub lin: Vector3<Real>,
     pub rot: Vector3<Real>,
-
 }
 
-#[test]
+
+impl Add<&SpatialForce> for SpatialForce {
+    type Output = Self;
+
+    fn add(self, other: &Self) -> Self {
+        Self {lin: self.lin+other.lin, rot: self.rot+other.rot}
+    }
+}
+
+impl AddAssign for SpatialForce {
+    fn add_assign(&mut self, other: Self) {
+        self.lin += other.lin;
+        self.rot += other.rot
+    }
+}
+
+impl Mul<&SpatialForce> for Transform {
+    type Output = SpatialForce;
+
+    fn mul(self, f: &SpatialForce) -> SpatialForce {
+        f.transform(&self)
+    }
+}
+
+impl SpatialForce {
+    /// (2.25) Transform the spatial force from the coordinate system in self.coord to world
+    pub fn transform(&self, tr: &Transform) -> Self {
+        SpatialForce {
+            lin: tr.rotation*self.lin,
+            rot: tr.rotation*(self.rot-tr.translation.vector.cross(&self.lin)),
+        }
+    }
+
+    /// (2.27)
+    pub fn inv_transform(&self, tr: &Transform) -> Self {
+        let rot_inv = tr.rotation.inverse();
+        let new_lin = rot_inv*self.lin;
+        SpatialForce {
+            lin: new_lin,
+            rot: rot_inv*self.rot + tr.translation.vector.cross(&new_lin)
+        }
+    }
+}
 //TODO Not fully implemented/tested
 fn vel_cross() {
     let v1 = Vector3::new(0., 0., 1.);
@@ -122,11 +164,41 @@ fn vel_transform() {
         
     let X2 = Transform {
         rotation: UnitQuaternion::from_axis_angle(&Vector3::z_axis(),
-                                                  std::f32::consts::FRAC_PI_2),
+                                                  -std::f32::consts::FRAC_PI_2),
         translation: Translation3::new(0.,0.,0.)
     };
     let v2 = X2*&v;
-    assert!(v2.lin.relative_eq(&Vector3::new(-1., 0., 0.), eps, eps));
-    assert!(v2.rot.relative_eq(&Vector3::new(0., 1., 0.), eps, eps));
+    assert!(v2.lin.relative_eq(&Vector3::new(1., 0., 0.), eps, eps));
+    assert!(v2.rot.relative_eq(&Vector3::new(0., -1., 0.), eps, eps));
 }
- 
+
+#[test]
+fn force_transform() {
+    use nalgebra::UnitQuaternion;
+    let f = SpatialForce{
+        lin: Vector3::new(0., 1., 0.),
+        rot: Vector3::new(1., 0., 0.)
+    };
+
+    // Translation
+    let X1 = Transform{
+        rotation: UnitQuaternion::identity(),
+        translation: Translation3::new(1., 0., 0.)
+    };
+    
+    let eps = 0.0001;
+    let f1 = X1*&f;
+    assert!(f1.lin.relative_eq(&f.lin, eps, eps));
+    assert!(f1.rot.relative_eq(&Vector3::new(1., 0., -1.), eps, eps));
+        
+    let X2 = Transform {
+        //WARNING! This friendly constructor constructs a Quat which rotates vectors abt z by -pi/2
+        //         It is the inverse of constructing a rotation matrix about z for the coord transform
+        rotation: UnitQuaternion::from_axis_angle(&Vector3::z_axis(),
+                                                  -std::f32::consts::FRAC_PI_2),
+        translation: Translation3::new(0.,0.,0.)
+    };
+    let f2 = X2*&f;
+    assert!(f2.lin.relative_eq(&Vector3::new(1., 0., 0.), eps, eps));
+    assert!(f2.rot.relative_eq(&Vector3::new(0., -1., 0.), eps, eps));
+}

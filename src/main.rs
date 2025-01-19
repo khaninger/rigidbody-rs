@@ -10,7 +10,6 @@ use parry3d::mass_properties::MassProperties;
 mod spatial;
 mod joint;
 
-
 use spatial::*;
 use joint::*;
 
@@ -53,31 +52,38 @@ pub fn rnea() {
     let mut body_to_world = Isometry3::identity();
 
     for (i, jt) in jts.iter().enumerate() {
-        // Local joint transformation and velocity
+        // Transform to map vectors from parent to child
         let parent_to_body = jt.joint_transform(q[i]).inverse();   // X_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
         let vel_joint = body_jac*dq[i];  // vJ, (3.33)
         let cJ = SpatialVelocity::new(); // (3.42 & 3.43, no rate of change 
-
         body_to_world = parent_to_body*body_to_world;
 
         v = parent_to_body*&v + vel_joint;
         a = parent_to_body*&a + body_jac*ddq[i] + cJ; // + v.cross(vel_joint);
         let I = jt.child_mass.reconstruct_inertia_matrix();
+        let c = jt.child_mass.local_com.coords;
         let fi = SpatialForce {
-            lin: a.lin*jt.child_mass.mass(),
-            rot: I*a.rot
+            lin: a.lin*jt.child_mass.mass() - c.cross(&a.rot),
+            rot: I*a.rot + c.cross(&a.lin)*jt.child_mass.mass()
         };// + v.gcross_matrix()*I*v-Xj*f;
 
-        //println!("jt {:?} mass: {:?}", i, jt.child_mass.mass());
-        println!("jt {:?} vel: {:?}", i, v);
+        println!("jt {:?}\n   vel: {:?}\n   acc: {:?}\n force: {:?}", i, v, a, fi);
+        println!("mass: {:?} com: {:?}", jt.child_mass.mass(), jt.child_mass.local_com);
         f.push(fi); 
     }
-    println!("world to ee: {:?}", body_to_world);
+    println!("world to ee \n q: {:?}, tr: {:?}", q[0], body_to_world);
 
-    for (i, link) in jts.iter().rev().enumerate() {
+    for (i, jt) in jts.iter().enumerate().rev() {
         tau.push(BodyJacobian::revolute_z()*&f[i]);
-        //f = f[i] + Xj.transpose()*f
-    }
+        if i > 0 {
+            let f_tr = f[i].inv_transform(&jt.joint_transform(q[i]));
+            // are we transforming the forces right?
+            println!("jt {:?}\n   orig f: {:?}\n   tran f: {:?}", i, f[i], f_tr); 
+
+            //println!("jt {:?} transformed f: {:?}, original f: {:?}", i, f_tr, f[i-1]);
+            f[i-1] += f_tr;
+        }
+    };
     
     println!("vel: {:?}", v);
     println!("acc: {:?}", a);
