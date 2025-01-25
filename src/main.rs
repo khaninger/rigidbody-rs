@@ -36,12 +36,11 @@ pub fn rnea() {
 
     for (i, jt) in jts.iter().enumerate() {
         // Transform spatial vectors from parent to child link
-        let parent_to_link = jt.joint_transform(q[i]).inverse();   // X_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
+        let parent_to_link = jt.parent_to_child(q[i]); //_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
 
         // Velocity of the joint, expressed in child link coordinates
         let vel_joint = body_jac*dq[i];  // vJ, (3.33)
 
-        
         link_to_world = parent_to_link*link_to_world;
 
         v = parent_to_link*&v + vel_joint;
@@ -53,16 +52,17 @@ pub fn rnea() {
             rot: I*a.rot + c.cross(&a.lin)*jt.child_mass.mass()
         };// + v.gcross_matrix()*I*v-Xj*f;
 
-        println!("jt {:?}\n   vel: {:?}\n   acc: {:?}\n force: {:?}", i, v, a, fi);
-        println!("mass: {:?} com: {:?}", jt.child_mass.mass(), jt.child_mass.local_com);
+        //println!("jt {:?}\n   vel: {:?}\n   acc: {:?}\n force: {:?}", i, v, a, fi);
+        //println!("mass: {:?} com: {:?}", jt.child_mass.mass(), jt.child_mass.local_com);
         f.push(fi); 
     }
+    
     println!("world to ee \n q: {:?}, tr: {:?}", q[0], link_to_world);
 
     for (i, jt) in jts.iter().enumerate().rev() {
         tau.push(BodyJacobian::revolute_z()*&f[i]);
         if i > 0 {
-            let f_tr = f[i].inv_transform(&jt.joint_transform(q[i]));
+            let f_tr = jt.parent_to_child(q[i])*&f[i];
             // are we transforming the forces right?
             println!("jt {:?}\n   orig f: {:?}\n   tran f: {:?}", i, f[i], f_tr); 
 

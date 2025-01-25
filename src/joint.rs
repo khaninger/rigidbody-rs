@@ -53,24 +53,19 @@ pub struct RevoluteJoint<'a>  {
 
 impl <'b> RevoluteJoint<'b> {
     /// A pose expressed in the child coord system to a pose in the parent.
-    pub fn child_to_parent(&self,
-                           q: Real,
-                           child: &RelativeTransform
-    ) -> RelativeTransform {
-        //assert!(*child.coord_frame == self.child, "Child argument is not expressed in correct coordinate system");
-        RelativeTransform {
-            coord_frame: &self.parent.coord_frame,
-            pose: self.parent.pose*self.joint_transform(q)*child.pose
-        }
+    pub fn child_to_parent(&self, q: Real) -> Transform {
+        //assert!(*child.coord_frame == self.child, "Child argument is not expressed in correct coordinate system")
+        self.parent.pose*self.joint_transform(q)
+    }
+
+    pub fn parent_to_child(&self, q: Real) -> Transform {
+        self.joint_transform(-q)*self.parent.pose.inverse()
     }
 
     /// Transform coordinate frame from parent to child
     pub fn joint_transform(&self, q: Real) -> Transform {
         let jt_rot = UnitQuaternion::from_scaled_axis(self.axis.scale(q));
-        Transform{
-            translation: Translation3::identity(),
-            rotation: jt_rot
-        }
+        Transform{translation: Translation3::identity(),rotation: jt_rot}
     }
     
     pub fn from_xurdf_joint(
@@ -153,12 +148,9 @@ fn joint() {
             Vector3::<f32>::new(1.,1.,1.)
         )
     };
-    let child_pt = RelativeTransform {
-        coord_frame: &Coord::FIXED(jt2.child),
-        pose: Transform{
-            rotation: UnitQuaternion::identity(),
-            translation: Translation3::new(0.,0.,0.)
-        }
+    let child_pt = Transform{
+        rotation: UnitQuaternion::identity(),
+        translation: Translation3::new(0.,0.,0.)
     };
 
     let q1 = std::f32::consts::FRAC_PI_2;
@@ -167,15 +159,15 @@ fn joint() {
     let world_to_ee = jt2.joint_transform(q2)*jt1.joint_transform(q1);
     println!("jt1 trans {:?} jt2 trans {:?}", jt1.joint_transform(q1), jt2.joint_transform(q2));
     println!("world_to_ee {:?}", world_to_ee);
-    let child_pt_in_jt1 = jt2.child_to_parent(q2, &child_pt);
-    let child_pt_in_world = jt1.child_to_parent(q1, &child_pt_in_jt1);
-    println!("ee in jt1 {:?}, ee in world {:?}", child_pt_in_jt1.pose, child_pt_in_world.pose);
+    let child_pt_in_jt1 = jt2.child_to_parent(q2)*child_pt;
+    let child_pt_in_world = jt1.child_to_parent(q1)*child_pt_in_jt1;
+    println!("ee in jt1 {:?}, ee in world {:?}", child_pt_in_jt1, child_pt_in_world);
     let eps = 0.00001;
     
-    assert!(child_pt_in_jt1.pose.translation.vector.relative_eq(
+    assert!(child_pt_in_jt1.translation.vector.relative_eq(
         &Vector3::new(1.,1.,0.), eps, eps
     ));
-    assert!(child_pt_in_world.pose.translation.vector.relative_eq(
+    assert!(child_pt_in_world.translation.vector.relative_eq(
         &Vector3::new(0., -1., 0.), eps, eps
     ));
 
@@ -186,37 +178,27 @@ fn joint() {
 }
 
 #[test]
-fn test_rpy() {
-    let R = Rotation3::<Real>::from_euler_angles(0.,0.,std::f32::consts::FRAC_PI_2).transpose();
-    //println!("{}", R);
-}
-
-#[test]
 fn urdf() {
     let jts = parse_urdf(Path::new("assets/fr3.urdf"));
     
-    let mut prev_frame:Coord = Coord::WORLD;
-    let mut ee = RelativeTransform{coord_frame: &prev_frame, pose: Isometry3::<Real>::identity()};
+    let mut ee = Isometry3::<Real>::identity();
     for jt in jts.iter().rev() {
-        ee = jt.child_to_parent(1., &ee);
+        ee = jt.child_to_parent(1.)*ee;
     }
 
-    println!("EE Pose in world, ones {:?}", ee.pose);
+    println!("EE Pose in world, ones {:?}", ee);
+
+    ee = Isometry3::<Real>::identity();
+    for jt in jts.iter().rev() {
+        ee = jt.child_to_parent(0.)*ee;
+    }
+
+    println!("EE Pose in world, zeros {:?}", ee);
     
-    let mut prev_frame:Coord = Coord::WORLD;
-    let mut ee = RelativeTransform{coord_frame: &prev_frame, pose: Isometry3::<Real>::identity()};
+    ee = Isometry3::<Real>::identity();
     for jt in jts.iter().rev() {
-        ee = jt.child_to_parent(0., &ee);
+        ee = jt.child_to_parent(-1.)*ee;
     }
 
-    println!("EE Pose in world, zeros {:?}", ee.pose);
-    
-
-    let mut ee = RelativeTransform{coord_frame: &prev_frame, pose: Isometry3::<Real>::identity()};
-    for jt in jts.iter().rev() {
-        ee = jt.child_to_parent(-1., &ee);
-    }
-
-    println!("EE Pose in world, -ones {:?}", ee.pose);
-    assert!(false);
+    println!("EE Pose in world, -ones {:?}", ee);
 }
