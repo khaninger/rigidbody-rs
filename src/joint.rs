@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::iter::zip;
+use std::iter::{zip, Iterator};
 use nalgebra::{
     UnitVector3,
     Isometry3,
@@ -14,7 +14,7 @@ use nalgebra::{
 };
 use xurdf::{Robot, Link, Joint, parse_urdf_from_file};
 use parry3d::mass_properties::MassProperties;
-
+use itertools::izip;
 use crate::spatial::{SpatialForce, SpatialVelocity, BodyJacobian};
 
 pub type Real = f32;
@@ -61,6 +61,7 @@ impl Multibody {
         };
         let mut f = [SpatialForce::new(); 7];
 
+
         for (i, jt) in self.0.iter().enumerate() {
             // Transform spatial vectors from parent to child link
             let parent_to_link = jt.child_to_parent(q[i]); //_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
@@ -95,6 +96,50 @@ impl Multibody {
         //println!("acc: {:?}", a);
         //println!("tau: {:?}", tau);
     }
+    
+    pub fn rnea_zip(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
+        // Vel, acc, force of current link, in local link coordinates
+        let mut v = SpatialVelocity::new();
+        let mut a = SpatialVelocity {
+            lin: Vector3::<Real>::new(0., 0., -9.81),
+            rot: Vector3::<Real>::zeros()
+        };
+        let mut f = [SpatialForce::new(); 7];
+
+        let f_vec = Vec::<SpatialForce>::new();
+        
+        let mut f: [SpatialForce; 7] = izip!(self.0.iter(), q.iter(), dq.iter(), ddq.iter()).map(
+            |(jt, &qi, &dqi, &ddqi)| {
+                // Transform spatial vectors from parent to child link
+                let parent_to_link = jt.child_to_parent(qi); //_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
+
+                // Velocity of the joint, expressed in child link coordinates
+                let vel_joint = body_jac*dqi;  // vJ, (3.33)
+
+                v = parent_to_link*&v + vel_joint;
+                a = parent_to_link*&a + body_jac*ddqi; // + cJ // + v.cross(vel_joint);
+                let I = jt.child_mass.reconstruct_inertia_matrix();
+                let c = jt.child_mass.local_com.coords;
+
+                SpatialForce {
+                    lin: a.lin*jt.child_mass.mass() - c.cross(&a.rot),
+                    rot: I*a.rot + c.cross(&a.lin)*jt.child_mass.mass()// + v.gcross_matrix()*I*v-Xj*f;
+                }
+            }
+        ).collect::<Vec<_>>().try_into().expect("Direclty build forces");
+
+        // tau = self.0.iter().enumerate().rev().map(
+        let mut f_last = SpatialForce::new();
+
+        izip!(self.0.iter(), q.iter(), f.iter()).rev().map(
+            |(jt, &qi, &fi)| {
+                let taui = body_jac*&(fi+&f_last);
+                f_last = jt.parent_to_child(qi)*&fi;
+                taui
+            }
+        ).collect::<Vec<_>>().try_into().expect("Directly build torques")
+    }
+
 }
 
 /// An explicit revolute joint with a single degree of freedom
@@ -204,9 +249,9 @@ fn joint() {
     println!("Vel in parent frame: {:?} \n        child frame: {:?}", v, parent_to_child*&v);    
 }
 
-#[test]
+/*#[test]
 fn fwd_kin_from_ee() {
-    let jts = parse_urdf(Path::new("assets/fr3.urdf"));
+    let jts = Multibody::from_urdf(Path::new("assets/fr3.urdf"));
     
     let mut ee = Isometry3::<Real>::identity();
     for jt in jts.iter().rev() {
@@ -257,3 +302,4 @@ fn fwd_kin_from_world() {
 
     println!("WORLD Pose in world, world -ones {:?}", world.inverse());
 }
+*/
