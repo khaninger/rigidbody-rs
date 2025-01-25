@@ -4,30 +4,12 @@ use std::iter::zip;
 use std::time::{Duration, Instant};
 
 use nalgebra::{Isometry3, IsometryMatrix3, Matrix3, Point3, OPoint, Translation3, Unit, UnitQuaternion, Vector3, U3};
-use xurdf::{Robot, Link, Joint, parse_urdf_from_file};
-use parry3d::mass_properties::MassProperties;
 
 mod spatial;
 mod joint;
 
 use spatial::*;
 use joint::*;
-
-fn parse_urdf(path: &Path) -> [RevoluteJoint; 7] {
-    let robot = parse_urdf_from_file(path).unwrap();
-
-    let mut jts = Vec::<RevoluteJoint>::new();
-    let mut prev_frame:Coord = Coord::WORLD;
-    
-    for (joint, link) in zip(robot.joints.iter(), robot.links.iter()) {
-        if !joint.joint_type.contains("fixed") {
-            let rev_joint = RevoluteJoint::from_xurdf_joint(joint, link);
-            jts.push(rev_joint);
-        }
-    }
-    jts.try_into().unwrap()
-}
-
 
 const body_jac: BodyJacobian = BodyJacobian::revolute_z();
 

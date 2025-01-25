@@ -109,7 +109,8 @@ impl From<Vector6<Real>> for SpatialVelocity {
 
 impl From<SpatialVelocity> for Vector6<Real> {
     fn from(v: SpatialVelocity) -> Vector6<Real> {
-        Vector6::<Real>::new(v.rot[0], v.rot[1], v.rot[2], v.lin[0], v.lin[1], v.lin[2])
+        Vector6::<Real>::new(v.rot[0], v.rot[1], v.rot[2],
+                             v.lin[0], v.lin[1], v.lin[2])
     }
 }
 
@@ -140,12 +141,10 @@ impl Mul<&SpatialForce> for SpatialVelocity {
 
 /// A body jacobian multiplied by a joint vel or acc yields a SpatialVelocity, hacky shortcut for now
 pub type BodyJacobian = SpatialVelocity;
-
 impl BodyJacobian {
     pub const fn revolute_z() -> Self {
         return BodyJacobian{lin: Vector3::new(0., 0., 0.), rot: Vector3::new(0.,0.,1.)}
     }
-
 }
 
 #[derive(Debug, Default, Clone)]
@@ -188,7 +187,8 @@ impl From<Vector6<Real>> for SpatialForce {
 
 impl From<SpatialForce> for Vector6<Real> {
     fn from(f: SpatialForce) -> Vector6<Real> {
-        Vector6::<Real>::new(f.rot[0], f.rot[1], f.rot[2], f.lin[0], f.lin[1], f.lin[2])
+        Vector6::<Real>::new(f.rot[0], f.rot[1], f.rot[2],
+                             f.lin[0], f.lin[1], f.lin[2])
     }
 }
 
@@ -333,5 +333,4 @@ fn force_transform() {
     println!("{:?}\n{:?}", f2, f2_feath);
     assert!(f2.rot.relative_eq(&f2_feath.rot, eps, eps));
     assert!(f2.lin.relative_eq(&f2_feath.lin, eps, eps));
-
 }

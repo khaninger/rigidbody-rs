@@ -1,3 +1,5 @@
+use std::path::Path;
+use std::iter::zip;
 use nalgebra::{
     UnitVector3,
     Isometry3,
@@ -10,7 +12,7 @@ use nalgebra::{
     U3,
     convert
 };
-use xurdf::{Link, Joint};
+use xurdf::{Robot, Link, Joint, parse_urdf_from_file};
 use parry3d::mass_properties::MassProperties;
 
 pub type Real = f32;
@@ -58,16 +60,16 @@ impl <'b> RevoluteJoint<'b> {
         //assert!(*child.coord_frame == self.child, "Child argument is not expressed in correct coordinate system");
         RelativeTransform {
             coord_frame: &self.parent.coord_frame,
-            pose: self.joint_transform(q)*child.pose
+            pose: self.parent.pose*self.joint_transform(q)*child.pose
         }
     }
 
     /// Transform coordinate frame from parent to child
     pub fn joint_transform(&self, q: Real) -> Transform {
-        let jt_rot = UnitQuaternion::from_scaled_axis(self.axis.scale(-q));
+        let jt_rot = UnitQuaternion::from_scaled_axis(self.axis.scale(q));
         Transform{
-            translation: self.parent.pose.translation,
-            rotation: jt_rot*self.parent.pose.rotation
+            translation: Translation3::identity(),
+            rotation: jt_rot
         }
     }
     
@@ -83,7 +85,7 @@ impl <'b> RevoluteJoint<'b> {
                     joint.origin.rpy[0] as Real,
                     joint.origin.rpy[1] as Real,
                     joint.origin.rpy[2] as Real
-                ).transpose().scaled_axis()
+                ).scaled_axis()
             )
         };
         let local_com = OPoint::<Real, U3>::new(
@@ -97,6 +99,24 @@ impl <'b> RevoluteJoint<'b> {
         RevoluteJoint{axis, parent, child:Isometry3::identity(), child_mass}
     }
 }
+
+
+pub fn parse_urdf(path: &Path) -> [RevoluteJoint; 7] {
+    let robot = parse_urdf_from_file(path).unwrap();
+
+    let mut jts = Vec::<RevoluteJoint>::new();
+    let mut prev_frame:Coord = Coord::WORLD;
+    
+    for (joint, link) in zip(robot.joints.iter(), robot.links.iter()) {
+        if !joint.joint_type.contains("fixed") {
+            let rev_joint = RevoluteJoint::from_xurdf_joint(joint, link);
+            jts.push(rev_joint);
+        }
+    }
+    jts.try_into().unwrap()
+}
+
+
 
 //#[test]
 fn joint() {
@@ -171,31 +191,19 @@ fn test_rpy() {
     //println!("{}", R);
 }
 
-/*
 #[test]
-fn urdf() {   
-    let robot = parse_urdf_from_file(Path::new("assets/fr3.urdf")).unwrap();
-
-    let mut jts = Vec::<RevoluteJoint>::new();
-    let mut prev_frame:Coord = Coord::WORLD;
+fn urdf() {
+    let jts = parse_urdf(Path::new("assets/fr3.urdf"));
     
-    for (joint, link) in zip(robot.joints.iter(), robot.links.iter()) {
-        if !joint.joint_type.contains("fixed") {
-            let rev_joint = RevoluteJoint::from_xurdf_joint(joint, link, &prev_frame);
-            //prev_frame = Coord::FIXED(rev_joint.child);
- 
-            jts.push(rev_joint);
-        }
-    }
-    println!("Xurdf Joints: {:?}, Xurdf Links: {:?}, Proc Joints: {:?}", robot.joints.len(), robot.links.len(), jts.len());
-
+    let mut prev_frame:Coord = Coord::WORLD;
     let mut ee = RelativeTransform{coord_frame: &prev_frame, pose: Isometry3::<Real>::identity()};
     for jt in jts.iter().rev() {
         ee = jt.child_to_parent(1., &ee);
     }
 
     println!("EE Pose in world, ones {:?}", ee.pose);
-        
+    
+    let mut prev_frame:Coord = Coord::WORLD;
     let mut ee = RelativeTransform{coord_frame: &prev_frame, pose: Isometry3::<Real>::identity()};
     for jt in jts.iter().rev() {
         ee = jt.child_to_parent(0., &ee);
@@ -210,5 +218,5 @@ fn urdf() {
     }
 
     println!("EE Pose in world, -ones {:?}", ee.pose);
+    assert!(false);
 }
-*/
