@@ -16,12 +16,13 @@ const body_jac: BodyJacobian = BodyJacobian::revolute_z();
 pub fn rnea() {
     let jts = parse_urdf(&Path::new("assets/fr3.urdf"));
 
-    let q = &[0.; 7];
+    //let q = &[0., std::f32::consts::FRAC_PI_2, 0., 0., 0., 0., 0.];
+    let q = &[-1.; 7];
     let dq = &[0.; 7];
     let ddq = &[0.; 7];
 
     // Joint torques
-    let mut tau = Vec::<Real>::new();
+    let mut tau = [0.;7];
 
     // Vel, acc, force of current link, in local link coordinates
     let mut v = SpatialVelocity::new();
@@ -36,7 +37,7 @@ pub fn rnea() {
 
     for (i, jt) in jts.iter().enumerate() {
         // Transform spatial vectors from parent to child link
-        let parent_to_link = jt.parent_to_child(q[i]); //_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
+        let parent_to_link = jt.child_to_parent(q[i]); //_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
 
         // Velocity of the joint, expressed in child link coordinates
         let vel_joint = body_jac*dq[i];  // vJ, (3.33)
@@ -51,20 +52,29 @@ pub fn rnea() {
             lin: a.lin*jt.child_mass.mass() - c.cross(&a.rot),
             rot: I*a.rot + c.cross(&a.lin)*jt.child_mass.mass()
         };// + v.gcross_matrix()*I*v-Xj*f;
-
-        //println!("jt {:?}\n   vel: {:?}\n   acc: {:?}\n force: {:?}", i, v, a, fi);
-        //println!("mass: {:?} com: {:?}", jt.child_mass.mass(), jt.child_mass.local_com);
+       
+        println!("jt {:?}\n   vel: {:?}\n   acc: {:?}\n force: {:?}", i+1, v, a, fi);
+        println!("   parent_to_link: {:?}", parent_to_link);
+        println!("mass: {:?} com: {:?}", jt.child_mass.mass(), jt.child_mass.local_com);
         f.push(fi); 
     }
     
     println!("world to ee \n q: {:?}, tr: {:?}", q[0], link_to_world);
 
+    //let mut f_tr = SpatialForce {
+    //    lin: Vector3::new(5., 0., 0.),
+    //    ..Default::default()
+    //};
+    
     for (i, jt) in jts.iter().enumerate().rev() {
-        tau.push(BodyJacobian::revolute_z()*&f[i]);
+        tau[i] = BodyJacobian::revolute_z()*&f[i];
         if i > 0 {
+            //f_tr = jt.parent_to_child(q[i])*&f_tr;
+            //println!("jt {:?} f: {:?}\n    tr: {:?}", i, f_tr, jt.parent_to_child(q[i])); 
+            
             let f_tr = jt.parent_to_child(q[i])*&f[i];
             // are we transforming the forces right?
-            println!("jt {:?}\n   orig f: {:?}\n   tran f: {:?}", i, f[i], f_tr); 
+            println!("jt {:?}\n   orig f: {:?}\n   tran f: {:?}", i+1, f[i], f_tr); 
 
             //println!("jt {:?} transformed f: {:?}, original f: {:?}", i, f_tr, f[i-1]);
             f[i-1] += f_tr;

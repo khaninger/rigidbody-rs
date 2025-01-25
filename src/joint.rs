@@ -52,20 +52,21 @@ pub struct RevoluteJoint<'a>  {
 }
 
 impl <'b> RevoluteJoint<'b> {
-    /// A pose expressed in the child coord system to a pose in the parent.
+    /// Transformation from the child coordinate system to the parent, used for reverse iteration
     pub fn child_to_parent(&self, q: Real) -> Transform {
         //assert!(*child.coord_frame == self.child, "Child argument is not expressed in correct coordinate system")
         self.parent.pose*self.joint_transform(q)
     }
 
+    /// Transformation from parent coordinate system to the child
     pub fn parent_to_child(&self, q: Real) -> Transform {
-        self.joint_transform(-q)*self.parent.pose.inverse()
+        self.joint_transform(-q)*(self.parent.pose.inverse())
     }
 
-    /// Transform coordinate frame from parent to child
+    /// Transformation of the joint itself
     pub fn joint_transform(&self, q: Real) -> Transform {
         let jt_rot = UnitQuaternion::from_scaled_axis(self.axis.scale(q));
-        Transform{translation: Translation3::identity(),rotation: jt_rot}
+        Transform{translation: Translation3::identity(), rotation: jt_rot}
     }
     
     pub fn from_xurdf_joint(
@@ -178,7 +179,7 @@ fn joint() {
 }
 
 #[test]
-fn urdf() {
+fn fwd_kin_from_ee() {
     let jts = parse_urdf(Path::new("assets/fr3.urdf"));
     
     let mut ee = Isometry3::<Real>::identity();
@@ -189,7 +190,8 @@ fn urdf() {
     println!("EE Pose in world, ones {:?}", ee);
 
     ee = Isometry3::<Real>::identity();
-    for jt in jts.iter().rev() {
+    for (i, jt) in jts.iter().enumerate().rev() {
+        println!{"Joint: {}, {:?}", i, jt.child_to_parent(0.)};
         ee = jt.child_to_parent(0.)*ee;
     }
 
@@ -201,4 +203,31 @@ fn urdf() {
     }
 
     println!("EE Pose in world, -ones {:?}", ee);
+}
+
+#[test]
+fn fwd_kin_from_world() {
+    // ee is now world frame in link coordinates, and thus invert at end to get ee in world
+    let jts = parse_urdf(Path::new("assets/fr3.urdf"));
+    
+    let mut world = Isometry3::<Real>::identity();
+    for jt in jts.iter() {
+        world = jt.parent_to_child(1.)*world;
+    }
+
+    println!("WORLD Pose in world, world ones {:?}", world.inverse());
+
+    world = Isometry3::<Real>::identity();
+    for jt in jts.iter() {
+        world = jt.parent_to_child(0.)*world;
+    }
+
+    println!("WORLD Pose in world, world zeros {:?}", world.inverse());
+    
+    world = Isometry3::<Real>::identity();
+    for jt in jts.iter() {
+        world = jt.parent_to_child(-1.)*world;
+    }
+
+    println!("WORLD Pose in world, world -ones {:?}", world.inverse());
 }
