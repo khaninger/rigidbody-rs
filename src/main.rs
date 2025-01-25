@@ -38,8 +38,10 @@ pub fn rnea() {
     let dq = &[0.; 7];
     let ddq = &[0.; 7];
 
+    // Joint torques
     let mut tau = Vec::<Real>::new();
-    
+
+    // Vel, acc, force of current link, in local link coordinates
     let mut v = SpatialVelocity::new();
     let mut a = SpatialVelocity {
         lin: Vector3::<Real>::new(0., 0., -9.81),
@@ -47,19 +49,21 @@ pub fn rnea() {
     };
     let mut f = Vec::<SpatialForce>::new();
 
-    // Applying this should transform vels/forces
-    // in current body coordinates into world coordinates
-    let mut body_to_world = Isometry3::identity();
+    // Transform spatial vectors in link coordinates to world
+    let mut link_to_world = Isometry3::identity();
 
     for (i, jt) in jts.iter().enumerate() {
-        // Transform to map vectors from parent to child
-        let parent_to_body = jt.joint_transform(q[i]).inverse();   // X_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
-        let vel_joint = body_jac*dq[i];  // vJ, (3.33)
-        let cJ = SpatialVelocity::new(); // (3.42 & 3.43, no rate of change 
-        body_to_world = parent_to_body*body_to_world;
+        // Transform spatial vectors from parent to child link
+        let parent_to_link = jt.joint_transform(q[i]).inverse();   // X_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
 
-        v = parent_to_body*&v + vel_joint;
-        a = parent_to_body*&a + body_jac*ddq[i] + cJ; // + v.cross(vel_joint);
+        // Velocity of the joint, expressed in child link coordinates
+        let vel_joint = body_jac*dq[i];  // vJ, (3.33)
+
+        
+        link_to_world = parent_to_link*link_to_world;
+
+        v = parent_to_link*&v + vel_joint;
+        a = parent_to_link*&a + body_jac*ddq[i]; // + cJ // + v.cross(vel_joint);
         let I = jt.child_mass.reconstruct_inertia_matrix();
         let c = jt.child_mass.local_com.coords;
         let fi = SpatialForce {
@@ -71,7 +75,7 @@ pub fn rnea() {
         println!("mass: {:?} com: {:?}", jt.child_mass.mass(), jt.child_mass.local_com);
         f.push(fi); 
     }
-    println!("world to ee \n q: {:?}, tr: {:?}", q[0], body_to_world);
+    println!("world to ee \n q: {:?}, tr: {:?}", q[0], link_to_world);
 
     for (i, jt) in jts.iter().enumerate().rev() {
         tau.push(BodyJacobian::revolute_z()*&f[i]);

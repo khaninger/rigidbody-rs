@@ -1,14 +1,23 @@
+use std::convert::From;
 use std::ops::{Mul, Add, AddAssign};
-use nalgebra::{convert, OPoint, UnitVector3, Vector3, U3, Isometry3, Translation3, Point3};
+use nalgebra::{
+    convert,
+    OPoint,
+    UnitVector3,
+    Vector3,
+    Vector6,
+    Matrix3,
+    Matrix6,
+    U3,
+    Isometry3,
+    Translation3,
+    Rotation3,
+    Point3,
+    UnitQuaternion
+};
 
 type Real = f32;
 type Transform = Isometry3<Real>;
-
-#[derive(Debug, Default, Clone)]
-pub struct SpatialVelocity {
-    pub lin: Vector3<Real>,
-    pub rot: Vector3<Real>,
-}
 
 impl Mul<&SpatialVelocity> for Transform {
     type Output = SpatialVelocity;
@@ -16,6 +25,54 @@ impl Mul<&SpatialVelocity> for Transform {
     fn mul(self, v: &SpatialVelocity) -> SpatialVelocity {
         v.transform(&self)
     }
+}
+
+/// Create Featherstone 6x6 matrix (2.24) from Isometry3.
+///   where T is the transformation of frame A to B
+/// Can't use a standard Into because Matrix6 and Isometry3
+///   are not in our crate :(
+fn transform_to_B_X_A(T: Transform) -> Matrix6<Real> {
+    let E = T.rotation.inverse().to_rotation_matrix();
+    let r = T.translation.vector;
+    let r_cross = Matrix3::<Real>::new(   0., -r[2],  r[1],
+                                        r[2],    0., -r[0],
+                                       -r[1],  r[0],    0.);
+    let Er_cross = E*r_cross;
+    Matrix6::<Real>::new(
+        E[(0, 0)], E[(0, 1)], E[(0, 2)], 0.0, 0.0, 0.0,
+        E[(1, 0)], E[(1, 1)], E[(1, 2)], 0.0, 0.0, 0.0,
+        E[(2, 0)], E[(2, 1)], E[(2, 2)], 0.0, 0.0, 0.0,
+        -Er_cross[(0, 0)], -Er_cross[(0, 1)], -Er_cross[(0, 2)], E[(0, 0)], E[(0, 1)], E[(0, 2)],
+        -Er_cross[(1, 0)], -Er_cross[(1, 1)], -Er_cross[(1, 2)], E[(1, 0)], E[(1, 1)], E[(1, 2)],
+        -Er_cross[(2, 0)], -Er_cross[(2, 1)], -Er_cross[(2, 2)], E[(2, 0)], E[(2, 1)], E[(2, 2)],
+    )
+}
+
+/// Create Featherstone 6x6 matrix (2.25) from Isometry3.
+///   where T is the transformation of frame A to B
+/// Can't use a standard Into because Matrix6 and Isometry3
+///   are not in our crate :(
+fn transform_to_B_X_A_star(T: Transform) -> Matrix6<Real>{
+    let E = T.rotation.inverse().to_rotation_matrix();
+    let r = T.translation.vector;
+    let r_cross = Matrix3::<Real>::new(   0., -r[2],  r[1],
+                                        r[2],    0., -r[0],
+                                       -r[1],  r[0],    0.);
+    let Er_cross = E*r_cross;
+    Matrix6::<Real>::new(
+        E[(0, 0)], E[(0, 1)], E[(0, 2)], -Er_cross[(0, 0)], -Er_cross[(0, 1)], -Er_cross[(0, 2)],
+        E[(1, 0)], E[(1, 1)], E[(1, 2)], -Er_cross[(1, 0)], -Er_cross[(1, 1)], -Er_cross[(1, 2)], 
+        E[(2, 0)], E[(2, 1)], E[(2, 2)], -Er_cross[(2, 0)], -Er_cross[(2, 1)], -Er_cross[(2, 2)], 
+        0.0, 0.0, 0.0, E[(0, 0)], E[(0, 1)], E[(0, 2)], 
+        0.0, 0.0, 0.0, E[(1, 0)], E[(1, 1)], E[(1, 2)],
+        0.0, 0.0, 0.0, E[(2, 0)], E[(2, 1)], E[(2, 2)],
+    )
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct SpatialVelocity {
+    pub lin: Vector3<Real>,
+    pub rot: Vector3<Real>,
 }
 
 /// A spatial velocity denotes the speed of a rigid body in a fixed coordinate system.
@@ -27,9 +84,10 @@ impl SpatialVelocity {
 
     /// Transform the spatial velocity from the coordinate system in self.coord to world
     pub fn transform(&self, tr: &Transform) -> Self {
+        let rot = tr.rotation.inverse();
         SpatialVelocity {
-            lin: tr.rotation*(self.lin-tr.translation.vector.cross(&self.rot)),
-            rot: tr.rotation*self.rot,
+            lin: rot*(self.lin-tr.translation.vector.cross(&self.rot)),
+            rot: rot*self.rot,
         }
     }
 
@@ -41,6 +99,20 @@ impl SpatialVelocity {
         }
     }
 }
+
+impl From<Vector6<Real>> for SpatialVelocity {
+    fn from(v: Vector6<Real>) -> SpatialVelocity {
+        SpatialVelocity { lin: Vector3::new(v[3], v[4], v[5]),
+                          rot: Vector3::new(v[0], v[1], v[2]) }
+    }
+}
+
+impl From<SpatialVelocity> for Vector6<Real> {
+    fn from(v: SpatialVelocity) -> Vector6<Real> {
+        Vector6::<Real>::new(v.rot[0], v.rot[1], v.rot[2], v.lin[0], v.lin[1], v.lin[2])
+    }
+}
+
 
 impl Mul<Real> for SpatialVelocity {
     type Output = SpatialVelocity;
@@ -106,12 +178,27 @@ impl Mul<&SpatialForce> for Transform {
     }
 }
 
+
+impl From<Vector6<Real>> for SpatialForce {
+    fn from(f: Vector6<Real>) -> SpatialForce {
+        SpatialForce { lin: Vector3::new(f[3], f[4], f[5]),
+                       rot: Vector3::new(f[0], f[1], f[2]) }
+    }
+}
+
+impl From<SpatialForce> for Vector6<Real> {
+    fn from(f: SpatialForce) -> Vector6<Real> {
+        Vector6::<Real>::new(f.rot[0], f.rot[1], f.rot[2], f.lin[0], f.lin[1], f.lin[2])
+    }
+}
+
 impl SpatialForce {
     /// (2.25) Transform the spatial force from the coordinate system in self.coord to world
     pub fn transform(&self, tr: &Transform) -> Self {
+        let rot = tr.rotation.inverse();
         SpatialForce {
-            lin: tr.rotation*self.lin,
-            rot: tr.rotation*(self.rot-tr.translation.vector.cross(&self.lin)),
+            lin: rot*self.lin,
+            rot: rot*(self.rot-tr.translation.vector.cross(&self.lin)),
         }
     }
 
@@ -143,62 +230,108 @@ fn vel_cross() {
     //println!("{:?}", sv1.cross(&sv2));
 }
 
+/// Check if the conventions used match that of Featherstone
+/// -> Featherstone's convention is for _elements_, not a transformation
+///    of the coordinate frame. This is the inverse of typical
+///    convention, incl. in nalgebra.
+#[test]
+fn coord_transforms() {
+    use nalgebra::{UnitQuaternion, Matrix3};
+    use std::f32::*;
+
+    // Pure rotation
+    let theta = std::f32::consts::FRAC_PI_2;
+    let rot = UnitQuaternion::from_axis_angle(&Vector3::z_axis(),
+                                              -theta);
+    let rz = |t: f32| -> Matrix3<f32> { Matrix3::new( t.cos(), t.sin(), 0.,
+                                                     -t.sin(), t.cos(), 0.,
+                                                      0.,      0.,      1.) };
+    assert!(rot.to_rotation_matrix().matrix().relative_eq(&rz(theta), 1e-5, 1e-5));
+
+    // Just make sure nothing funky is happening in multiplying w/ nalgebra
+    let x = Vector3::new(1.,0.,0.);
+    assert!((rot*x).relative_eq(&Vector3::new(0., -1., 0.), 1e-5, 1e-5));
+}
+
 #[test]
 fn vel_transform() {
-    use nalgebra::UnitQuaternion;
+    use nalgebra::{Matrix3, Matrix6, Vector6};
+    let eps = 0.0001;
+    
     let v = SpatialVelocity{
-        lin: Vector3::new(0., 1., 0.),
-        rot: Vector3::new(1., 0., 0.)
+        lin: *Vector3::y_axis(),
+        rot: *Vector3::x_axis()
     };
-
+    let v_v6: Vector6<Real> = v.clone().into();
+    
     // Translation
     let X1 = Transform{
-        rotation: UnitQuaternion::identity(),
-        translation: Translation3::new(0., 1., 0.)
+        translation: Translation3::new(0., 1., 0.),
+        ..Default::default()
     };
-    
-    let eps = 0.0001;
+    let X1_feath = transform_to_B_X_A(X1);
+   
     let v1 = X1*&v;
-    assert!(v1.lin.relative_eq(&Vector3::new(0., 1., 1.), eps, eps));
-    assert!(v1.rot.relative_eq(&v.rot, eps, eps));
-        
+    let v1_feath_v6: Vector6<Real> = X1_feath*v_v6;
+    let v1_feath: SpatialVelocity = v1_feath_v6.into();
+
+    assert!(v1.rot.relative_eq(&v1_feath.rot, eps, eps));
+    assert!(v1.lin.relative_eq(&v1_feath.lin, eps, eps));
+
+    let theta = std::f32::consts::FRAC_PI_2;
     let X2 = Transform {
-        rotation: UnitQuaternion::from_axis_angle(&Vector3::z_axis(),
-                                                  -std::f32::consts::FRAC_PI_2),
+        rotation: UnitQuaternion::from_axis_angle(&Vector3::z_axis(), theta),
         translation: Translation3::new(0.,0.,0.)
     };
-    let v2 = X2*&v;
-    assert!(v2.lin.relative_eq(&Vector3::new(1., 0., 0.), eps, eps));
-    assert!(v2.rot.relative_eq(&Vector3::new(0., -1., 0.), eps, eps));
+    let X2_feath = transform_to_B_X_A(X2);
+    
+    let v2 = X2*&v;    
+    let v2_feath_v6 = X2_feath*v_v6;
+    let v2_feath: SpatialVelocity = v2_feath_v6.into();
+    
+    assert!(v2.rot.relative_eq(&v2_feath.rot, eps, eps));
+    assert!(v2.lin.relative_eq(&v2_feath.lin, eps, eps));
 }
 
 #[test]
 fn force_transform() {
     use nalgebra::UnitQuaternion;
+
+    let eps = 0.0001;
     let f = SpatialForce{
         lin: Vector3::new(0., 1., 0.),
         rot: Vector3::new(1., 0., 0.)
     };
-
+    let f_v6: Vector6<Real> = f.clone().into();
+    
     // Translation
     let X1 = Transform{
         rotation: UnitQuaternion::identity(),
         translation: Translation3::new(1., 0., 0.)
     };
-    
-    let eps = 0.0001;
+    let X1_feath = transform_to_B_X_A_star(X1.clone());
+
     let f1 = X1*&f;
-    assert!(f1.lin.relative_eq(&f.lin, eps, eps));
-    assert!(f1.rot.relative_eq(&Vector3::new(1., 0., -1.), eps, eps));
-        
+    let f1_feath_v6 = X1_feath*f_v6;
+    let f1_feath:SpatialForce = f1_feath_v6.into();
+
+    assert!(f1.rot.relative_eq(&f1_feath.rot, eps, eps));
+    assert!(f1.lin.relative_eq(&f1_feath.lin, eps, eps));
+
+    
+    let theta = std::f32::consts::FRAC_PI_2;
     let X2 = Transform {
-        //WARNING! This friendly constructor constructs a Quat which rotates vectors abt z by -pi/2
-        //         It is the inverse of constructing a rotation matrix about z for the coord transform
         rotation: UnitQuaternion::from_axis_angle(&Vector3::z_axis(),
-                                                  -std::f32::consts::FRAC_PI_2),
-        translation: Translation3::new(0.,0.,0.)
+                                                  theta),
+        translation: Translation3::new(0.3,0.5,0.)
     };
+    let X2_feath = transform_to_B_X_A_star(X2.clone());
     let f2 = X2*&f;
-    assert!(f2.lin.relative_eq(&Vector3::new(1., 0., 0.), eps, eps));
-    assert!(f2.rot.relative_eq(&Vector3::new(0., -1., 0.), eps, eps));
+    let f2_feath_v6 = X2_feath*f_v6;
+    let f2_feath: SpatialForce = f2_feath_v6.into();
+    
+    println!("{:?}\n{:?}", f2, f2_feath);
+    assert!(f2.rot.relative_eq(&f2_feath.rot, eps, eps));
+    assert!(f2.lin.relative_eq(&f2_feath.lin, eps, eps));
+
 }
