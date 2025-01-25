@@ -147,7 +147,7 @@ impl BodyJacobian {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SpatialForce {
     pub lin: Vector3<Real>,
     pub rot: Vector3<Real>,
@@ -193,6 +193,10 @@ impl From<SpatialForce> for Vector6<Real> {
 }
 
 impl SpatialForce {
+    pub fn new() -> Self {
+        SpatialForce { lin: Vector3::new(0.,0.,0.), rot: Vector3::new(0.,0.,0.) }
+    }
+    
     /// (2.25) Transform the spatial force from the coordinate system in self.coord to world
     pub fn transform(&self, tr: &Transform) -> Self {
         let rot = tr.rotation.inverse();
