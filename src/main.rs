@@ -13,14 +13,9 @@ use joint::*;
 
 const body_jac: BodyJacobian = BodyJacobian::revolute_z();
 
-pub fn rnea() {
+pub fn rnea(q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
     let jts = parse_urdf(&Path::new("assets/fr3.urdf"));
-
-    //let q = &[0., std::f32::consts::FRAC_PI_2, 0., 0., 0., 0., 0.];
-    let q = &[-1.; 7];
-    let dq = &[0.; 7];
-    let ddq = &[0.; 7];
-
+    
     // Joint torques
     let mut tau = [0.;7];
 
@@ -53,37 +48,24 @@ pub fn rnea() {
             rot: I*a.rot + c.cross(&a.lin)*jt.child_mass.mass()
         };// + v.gcross_matrix()*I*v-Xj*f;
        
-        println!("jt {:?}\n   vel: {:?}\n   acc: {:?}\n force: {:?}", i+1, v, a, fi);
-        println!("   parent_to_link: {:?}", parent_to_link);
-        println!("mass: {:?} com: {:?}", jt.child_mass.mass(), jt.child_mass.local_com);
+        //println!("jt {:?}\n   vel: {:?}\n   acc: {:?}\n force: {:?}", i+1, v, a, fi);
+        //println!("   parent_to_link: {:?}", parent_to_link);
+        //println!("mass: {:?} com: {:?}", jt.child_mass.mass(), jt.child_mass.local_com);
         f.push(fi); 
     }
-    
-    println!("world to ee \n q: {:?}, tr: {:?}", q[0], link_to_world);
-
-    //let mut f_tr = SpatialForce {
-    //    lin: Vector3::new(5., 0., 0.),
-    //    ..Default::default()
-    //};
     
     for (i, jt) in jts.iter().enumerate().rev() {
         tau[i] = BodyJacobian::revolute_z()*&f[i];
         if i > 0 {
-            //f_tr = jt.parent_to_child(q[i])*&f_tr;
-            //println!("jt {:?} f: {:?}\n    tr: {:?}", i, f_tr, jt.parent_to_child(q[i])); 
-            
             let f_tr = jt.parent_to_child(q[i])*&f[i];
-            // are we transforming the forces right?
-            println!("jt {:?}\n   orig f: {:?}\n   tran f: {:?}", i+1, f[i], f_tr); 
-
-            //println!("jt {:?} transformed f: {:?}, original f: {:?}", i, f_tr, f[i-1]);
             f[i-1] += f_tr;
         }
     };
-    
-    println!("vel: {:?}", v);
-    println!("acc: {:?}", a);
-    println!("tau: {:?}", tau);
+
+    tau
+    //println!("vel: {:?}", v);
+    //println!("acc: {:?}", a);
+    //println!("tau: {:?}", tau);
 }
 
 fn fwd_kin (q: &[Real; 7]) {
@@ -100,9 +82,16 @@ fn fwd_kin (q: &[Real; 7]) {
 }
 
 fn main() {
+    let q = &[0.; 7];
+    let dq = &[0.; 7];
+    let ddq = &[0.; 7];
     fwd_kin(&[1.; 7]);
     fwd_kin(&[0.; 7]);
     fwd_kin(&[-1.; 7]);
-    rnea();
+
+    let start = Instant::now();
+    let tau = rnea(q, dq, ddq);
+    let elapsed = start.elapsed();
+    println!("Took in ms {} to find tau = {:?}", elapsed.as_nanos() as f64 / 1_000_000., tau);
 }
 
