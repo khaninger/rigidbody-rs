@@ -91,12 +91,20 @@ impl SpatialVelocity {
         }
     }
 
-    ///Cross product with another spatial velocity
+    ///(2.33) Cross product with another spatial velocity
     pub fn cross(&self, other: &SpatialVelocity) -> SpatialVelocity {
         SpatialVelocity {
             lin: self.lin.cross(&other.rot) + other.lin.cross(&self.rot),
             rot: self.rot.cross(&other.rot)
         }
+    }
+
+    /// (2.34) Cross product with a spatial force
+    pub fn cross_star(&self, f: &SpatialForce) -> SpatialForce {
+        SpatialForce {
+            lin: self.rot.cross(&f.lin),
+            rot: self.rot.cross(&f.rot) + self.lin.cross(&f.lin)
+        }       
     }
 }
 
@@ -123,10 +131,10 @@ impl Mul<Real> for SpatialVelocity {
     }
 }
 
-impl Add<SpatialVelocity> for SpatialVelocity {
+impl Add<&SpatialVelocity> for SpatialVelocity {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
+    fn add(self, other: &Self) -> Self {
         Self {lin: self.lin+other.lin, rot: self.rot+other.rot}
     }
 }

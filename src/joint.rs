@@ -17,28 +17,26 @@ use xurdf::{Robot, Link, Joint, parse_urdf_from_file};
 use parry3d::mass_properties::MassProperties;
 use itertools::izip;
 use crate::spatial::{SpatialForce, SpatialVelocity, BodyJacobian};
-
-pub type Real = f32;
-pub type Transform = Isometry3<Real>;
+use crate::{Real, Transform};
+use crate::rigidbody::Rigidbody;
 
 /// An explicit revolute joint with a single degree of freedom
 #[derive(Debug)]
 pub struct RevoluteJoint  {
     pub axis: Unit<Vector3<Real>>, // Normed axis for the revolute joint
     pub parent: Transform, // Pose of joint coord system relative to parent
-    pub child_mass_prop: MassProperties,
-    pub child_inertia: Matrix3<Real>
+    pub body: Rigidbody,
 }
 
 impl RevoluteJoint {
     /// Transformation from the child coordinate system to the parent, used for reverse iteration
-    pub fn child_to_parent(&self, q: Real) -> Transform {
+    pub fn parent_to_child(&self, q: Real) -> Transform {
         //assert!(*child.coord_frame == self.child, "Child argument is not expressed in correct coordinate system")
         self.parent*self.joint_transform(q)
     }
 
     /// Transformation from parent coordinate system to the child
-    pub fn parent_to_child(&self, q: Real) -> Transform {
+    pub fn child_to_parent(&self, q: Real) -> Transform {
         self.joint_transform(-q)*(self.parent.inverse())
     }
 
@@ -60,16 +58,15 @@ impl RevoluteJoint {
                 joint.origin.rpy[2] as Real
             ).scaled_axis()
         );
-        let local_com = OPoint::<Real, U3>::new(
+        let com = OPoint::<Real, U3>::new(
             link.inertial.origin.xyz[0] as Real,
             link.inertial.origin.xyz[1] as Real,
             link.inertial.origin.xyz[2] as Real,
         );
         let mass:Real = convert(link.inertial.mass);
         let inertia = convert(link.inertial.inertia); 
-        let child_mass_prop = MassProperties::with_inertia_matrix(local_com, mass, inertia);
-        let child_inertia = child_mass_prop.reconstruct_inertia_matrix();
-        RevoluteJoint{axis, parent, child_mass_prop, child_inertia}
+        let body = Rigidbody{mass, com: com, inertia};
+        RevoluteJoint{axis, parent, body}
     }
 }
 
