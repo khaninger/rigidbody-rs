@@ -12,6 +12,10 @@ rapier3d = "0.22.0"
 rapier3d-urdf = "0.3.0"
 xurdf = "0.2.5"
 
+[lib]
+crate-type = ["cdylib"]
+#name = "rigidbody"
+#path = "./src/cxx_interface.rs"
 #[[bin]]
 #  name = "rapier3d_example"
 #  path = "./rapier3d_multijoint_example.rs"
