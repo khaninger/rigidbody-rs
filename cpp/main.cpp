@@ -1,6 +1,6 @@
 // main.cpp
 #include <iostream>
-#include "multibody.h"
+#include "rigidbody.h"
 
 int main() {
     Multibody* mb = multibody_new();
