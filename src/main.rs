@@ -1,14 +1,17 @@
 #![allow(warnings)] // Suppress warning message on compile
+#![feature(test)]
+
 use std::path::Path;
 use std::iter::zip;
 use std::time::{Duration, Instant};
 
 mod spatial;
 mod joint;
-mod utils;
+mod multibody;
 
 use spatial::*;
 use joint::*;
+use multibody::*;
 
 use nalgebra::Vector3;
 
@@ -18,13 +21,6 @@ fn main() {
     let dq = &[0.; 7];
     let ddq = &[0.; 7];
 
-    let t = &[0., 1., 2., 3., 4., 5.];
-    let mut cnt:f32 = 0.;
-    let f: Vec<SpatialForce> = t.iter().map(
-        |ti| { cnt += ti;
-               SpatialForce {lin: Vector3::new(cnt, 0., 0.), ..Default::default() } }
-    ).collect();
-    println!("{:?}", f);
     let start = Instant::now();
     let tau = mb.rnea(q, dq, ddq);
     let elapsed = start.elapsed();
