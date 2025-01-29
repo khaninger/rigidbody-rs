@@ -27,11 +27,15 @@ pub extern "C" fn multibody_new() -> *mut Multibody {
 }
 
 #[no_mangle]
-pub extern "C" fn multibody_rnea<'a>(q: &'a [f32; 7],
+pub extern "C" fn multibody_rnea<'a>(mb_ptr: *mut Multibody,
+                                     q: &'a [f32; 7],
                                      dq: &'a [f32; 7],
                                      ddq: &'a [f32; 7]) -> [f32; 7] {
     println!("REally doing it! {:?}, {:?}, {:?}", q, dq, ddq);
-    let mb = Multibody::from_urdf(&Path::new("/home/hanikevi/rigidbody-rs/assets/fr3.urdf"));
+    //let mb = unsafe { mb_ptr.as_ref()}.expect("Err deref-ing pointer to multibody");
+    let mb = unsafe { Box::from_raw(mb_ptr)};
+    println!("multibody: {:?}", mb);
+//    let mb = Multibody::from_urdf(&Path::new("/home/hanikevi/rigidbody-rs/assets/fr3.urdf"));
     mb.rnea(q, dq, dq)
 }
 

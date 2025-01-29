@@ -24,8 +24,8 @@ pub type Transform = Isometry3<Real>;
 
 const body_jac: BodyJacobian = BodyJacobian::revolute_z();
 
-//pub struct Multibody(Vec<RevoluteJoint>);
 #[derive(Debug)]
+#[repr(C)]
 pub struct Multibody([RevoluteJoint; 7]);
 
 

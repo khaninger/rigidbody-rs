@@ -1,19 +1,24 @@
-#ifndef MULTIBODY_INTERFACE_H
-#define MULTIBODY_INTERFACE_H
+#include <cstdarg>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <ostream>
+#include <new>
 
-#ifdef __cplusplus
+
+
+struct Multibody;
+
+
 extern "C" {
-#endif
 
-struct Multibody; // Forward declaration
+void multibody_free(Multibody *mb_ptr);
 
-// Function declarations
-Multibody* multibody_new();
-float* multibody_rnea(const float q[7], const float dq[7], const float ddq[7]);
-void multibody_free(Multibody* mb);
+Multibody *multibody_new();
 
-#ifdef __cplusplus
-}
-#endif
+float* multibody_rnea(Multibody *mb_ptr,
+                      float q[7],
+                      float dq[7],
+                      float ddq[7]);
 
-#endif // MULTIBODY_INTERFACE_H
+}  // extern "C"
