@@ -10,7 +10,7 @@ use rigidbody::multibody::*;
 use nalgebra::{Vector3, Isometry3};
 
 fn main() {
-    let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
+    let mb = Multibody::from_urdf(&Path::new("assets/fr3.urdf"));
     let q = &[0.; 7];
     let dq = &[0.; 7];
     let ddq = &[0.; 7];

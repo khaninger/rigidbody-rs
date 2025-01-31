@@ -1,21 +1,29 @@
 use std::path::Path;
+use std::os::raw::c_float;
+use std::slice;
 
 use rigidbody::multibody::Multibody; 
 
 #[no_mangle]
 pub extern "C" fn multibody_new() -> *mut Multibody {
-    println!("We're doing it, man!");
+    //println!("We're doing it, man!");
     let mb = Multibody::from_urdf(&Path::new("/home/hanikevi/rigidbody-rs/assets/fr3.urdf"));
     Box::into_raw(Box::new(mb))
 }
 
 #[no_mangle]
-pub extern "C" fn multibody_rnea<'a>(q: &'a [f32; 7],
-                                     dq: &'a [f32; 7],
-                                     ddq: &'a [f32; 7]) -> [f32; 7] {
-    println!("Calling RNEA with\n    q:{:?}\n   dq:{:?}\n  ddq:{:?}", q, dq, ddq);
+pub extern "C" fn multibody_rnea<'a>(q_: *const c_float,
+                                     dq_: *const c_float,
+                                     ddq_: *const c_float) -> *const c_float {
+    let q = unsafe{slice::from_raw_parts(q_, 7)};
+    let dq = unsafe{slice::from_raw_parts(dq_, 7)};
+    let ddq = unsafe{slice::from_raw_parts(ddq_, 7)};
+                    
+    //println!("Calling RNEA with\n    q:{:?}\n   dq:{:?}\n  ddq:{:?}", q, dq, ddq);
     let mb = Multibody::from_urdf(&Path::new("/home/hanikevi/rigidbody-rs/assets/fr3.urdf"));
-    mb.rnea(q, dq, dq)
+    let ptr = Box::into_raw(Box::new(mb.rnea(q, dq, ddq)));
+
+    ptr as *const c_float
 }
 
 #[no_mangle]

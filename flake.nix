@@ -17,11 +17,11 @@
 
       rustPkgs = pkgs.rustBuilder.makePackageSet {
         rustVersion = "1.75.0";
-        packageFun = import ./rust_bindings/Cargo.nix;
+        packageFun = import ./Cargo.nix;
       };
       
-      #rigidbody = (rustPkgs.workspace.rigidbody {});
-      rigidbody_bindings = (rustPkgs.workspace.rigidbody_bindings {});
+      rigidbody = (rustPkgs.workspace.rigidbody {});
+      rigidbody_bindings = (rustPkgs.workspace.rigidbody-bindings {});
 
       bindings = pkgs.stdenv.mkDerivation {
         pname = "rigidbody-bindings";
@@ -38,12 +38,12 @@
         configurePhase = "";
         buildPhase = ''
           mkdir -p $out/bin
-          g++ -o main main.cpp -L${rigidbody_bindings}/bin -lrigidbody_bindings
+          g++ -o main main.cpp -L${rigidbody_bindings}/bin -I${pkgs.eigen}/include/eigen3 -L${pkgs.pinocchio}/lib -lpinocchio_default -lpinocchio_parsers -lrigidbody_bindings
         '';
 
         installPhase = ''
           mkdir -p $out/bin
-          cp build/main $out/bin/
+          cp main $out/bin/
         '';
       };
 
@@ -63,16 +63,16 @@
       {
         packages.${system}.default = benchmark;
         apps.${system} = {
-          #default = {type="app"; program="${rigidbody}/bin/rigidbody";};
-          bindings = {type="app"; program="${bindings}/bin/main";};
+          default = {type="app"; program="${rigidbody}/bin/rigidbody";}; # runs rigibody/src/main.rs 
+          bindings = {type="app"; program="${bindings}/bin/main";};      # runs cpp/main.cpp, linked again rigidboy_binings.so
           kinematics = {type = "app"; program="${benchmark}/bin/kinematics";};
           rnea = {type = "app"; program="${benchmark}/bin/rnea";};
         };
-        devShells = {        
+        devShells.${system} = {        
           default = pkgs.mkShell {
             packages = [
               benchmark
-              #rigidbody
+              rigidbody_bindings
             ];
           };
         };

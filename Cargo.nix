@@ -4,6 +4,7 @@
 args@{
   release ? true,
   rootFeatures ? [
+    "rigidbody/default"
     "rigidbody-bindings/default"
   ],
   rustPackages,
@@ -46,6 +47,7 @@ in
 {
   cargo2nixVersion = "0.11.0";
   workspace = {
+    rigidbody = rustPackages.unknown.rigidbody."0.1.0";
     rigidbody-bindings = rustPackages.unknown.rigidbody-bindings."0.1.0";
   };
   "registry+https://github.com/rust-lang/crates.io-index".ahash."0.8.11" = overridableMkRustCrate (profileName: rec {

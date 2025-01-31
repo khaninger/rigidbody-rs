@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "rigidbody",
+    "rigidbody_bindings"
+]
