@@ -9,7 +9,7 @@ int main() {
   
     float q[7] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     float dq[7] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    float ddq[7] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    float ddq[7] = {0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
     float* tau = multibody_rnea(mb, q, dq, ddq);
     std::cout << "RNEA Result: " << tau[0] << tau[1] << tau[2] << tau[3] << tau[4] << tau[5] << tau[6] << std::endl;

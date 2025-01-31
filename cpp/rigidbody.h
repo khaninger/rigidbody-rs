@@ -6,7 +6,6 @@
 #include <new>
 
 
-
 struct Multibody;
 
 

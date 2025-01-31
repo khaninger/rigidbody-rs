@@ -37,7 +37,7 @@ int main() {
     // Define joint velocities and accelerations (example values)
     Eigen::VectorXd dq = Eigen::VectorXd::Zero(model.nv); // Zero velocities
     Eigen::VectorXd ddq = Eigen::VectorXd::Zero(model.nv); // Zero accelerations
-
+  
     // Run RNEA for each configuration
     runRNEA(model, q1, dq, ddq);
     runRNEA(model, q2, dq, ddq);
