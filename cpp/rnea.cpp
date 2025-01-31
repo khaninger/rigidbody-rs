@@ -1,3 +1,4 @@
+//rnea.cpp
 #include <iostream>
 #include <chrono>
 
@@ -27,7 +28,7 @@ void runRNEA(const pinocchio::Model& model,
 
 int main() {
     pinocchio::Model model;
-    pinocchio::urdf::buildModel("../assets/fr3.urdf", model);
+    pinocchio::urdf::buildModel("assets/fr3.urdf", model);
 
     // Define joint configurations to test
     Eigen::VectorXd q1 = Eigen::VectorXd::Ones(model.nq); // All 1.0
@@ -37,7 +38,10 @@ int main() {
     // Define joint velocities and accelerations (example values)
     Eigen::VectorXd dq = Eigen::VectorXd::Zero(model.nv); // Zero velocities
     Eigen::VectorXd ddq = Eigen::VectorXd::Zero(model.nv); // Zero accelerations
+    ddq[0] = 5.;
 
+    std::cout << "ddq" << ddq.transpose() << std::endl;
+  
     // Run RNEA for each configuration
     runRNEA(model, q1, dq, ddq);
     runRNEA(model, q2, dq, ddq);

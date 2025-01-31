@@ -33,8 +33,8 @@
         cargoLock.lockFile = ./Cargo.lock;
       };
       
-      benchmark = pkgs.stdenv.mkDerivation {
-        pname = "rigidbody-benchmark";
+      bindings = pkgs.stdenv.mkDerivation {
+        pname = "rigidbody-bindings";
         version = "0.0.1";
         src = ./cpp;
 
@@ -48,8 +48,6 @@
         configurePhase = "";
         buildPhase = ''
           mkdir -p $out/bin
-          echo ${rigidbody}
-          ls ${rigidbody}/bin
           g++ -o main main.cpp -L${rigidbody}/bin -lrigidbody
         '';
 
@@ -58,18 +56,31 @@
           cp build/main $out/bin/
         '';
       };
+
+      benchmark = pkgs.stdenv.mkDerivation {
+        pname = "rigidbody-benchmark";
+        version = "0.0.1";
+        src = ./cpp;
+
+        buildInputs = [
+          pkgs.cmake
+          pkgs.gcc
+          pkgs.pinocchio
+          pkgs.eigen
+        ];
+      };        
     in
       {
         packages.${system}.default = benchmark;
         apps.${system} = {
-          default = {type="app"; program="${benchmark}/bin/main";};
-          #kinematics = {type = "app"; program="${benchmark}/bin/kinematics";};
-          #rnea = {type = "app"; program="${benchmark}/bin/rnea";};
+          default = {type="app"; program="${bindings}/bin/main";};
+          kinematics = {type = "app"; program="${benchmark}/bin/kinematics";};
+          rnea = {type = "app"; program="${benchmark}/bin/rnea";};
         };
         devShells = {        
           default = pkgs.mkShell {
             packages = [
-              #benchmark
+              benchmark
               rigidbody
             ];
           };
