@@ -4,7 +4,7 @@
 args@{
   release ? true,
   rootFeatures ? [
-    "rigidbody/default"
+    "rigidbody-bindings/default"
   ],
   rustPackages,
   buildRustPackages,
@@ -24,7 +24,7 @@ args@{
   ignoreLockHash,
 }:
 let
-  nixifiedLockHash = "2df5a866baa8f4cdbac18415b0d5fb482648afeff3d89444dbb610c5dd8ef8e3";
+  nixifiedLockHash = "1c407acebc254683d839b4fe5697223c25cadbad60b5de2728670e06da7886e2";
   workspaceSrc = if args.workspaceSrc == null then ./. else args.workspaceSrc;
   currentLockHash = builtins.hashFile "sha256" (workspaceSrc + /Cargo.lock);
   lockHashIgnored = if ignoreLockHash
@@ -46,7 +46,7 @@ in
 {
   cargo2nixVersion = "0.11.0";
   workspace = {
-    rigidbody = rustPackages.unknown.rigidbody."0.1.0";
+    rigidbody-bindings = rustPackages.unknown.rigidbody-bindings."0.1.0";
   };
   "registry+https://github.com/rust-lang/crates.io-index".ahash."0.8.11" = overridableMkRustCrate (profileName: rec {
     name = "ahash";
@@ -681,6 +681,16 @@ in
       nalgebra = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".nalgebra."0.33.2" { inherit profileName; }).out;
       parry3d = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".parry3d."0.17.5" { inherit profileName; }).out;
       xurdf = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".xurdf."0.2.5" { inherit profileName; }).out;
+    };
+  });
+  
+  "unknown".rigidbody-bindings."0.1.0" = overridableMkRustCrate (profileName: rec {
+    name = "rigidbody-bindings";
+    version = "0.1.0";
+    registry = "unknown";
+    src = fetchCrateLocal workspaceSrc;
+    dependencies = {
+      rigidbody = (rustPackages."unknown".rigidbody."0.1.0" { inherit profileName; }).out;
     };
   });
   

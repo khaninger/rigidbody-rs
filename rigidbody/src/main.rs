@@ -1,10 +1,16 @@
-use rigidbody::Multibody;
+#![allow(warnings)] // Suppress warning message on compile
+//#![feature(test)]
 
 use std::path::Path;
-use std::time::Instant;
+use std::iter::zip;
+use std::time::{Duration, Instant};
+
+use rigidbody::multibody::*;
+
+use nalgebra::{Vector3, Isometry3};
 
 fn main() {
-    let mb = Multibody::from_urdf(&Path::new("assets/fr3.urdf"));
+    let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
     let q = &[0.; 7];
     let dq = &[0.; 7];
     let ddq = &[0.; 7];

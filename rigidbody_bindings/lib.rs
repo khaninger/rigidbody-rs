@@ -1,23 +1,6 @@
-#![allow(warnings)] // Suppress warning message on compile
-//#![feature(test)]
-
 use std::path::Path;
-use std::iter::zip;
-use std::time::{Duration, Instant};
 
-mod spatial;
-mod joint;
-mod rigidbody;
-pub mod multibody;
-
-pub use spatial::*;
-pub use joint::*;
-pub use multibody::*;
-
-use nalgebra::{Vector3, Isometry3};
-
-pub type Real = f32;
-pub type Transform = Isometry3<Real>;
+use rigidbody::multibody::Multibody; 
 
 #[no_mangle]
 pub extern "C" fn multibody_new() -> *mut Multibody {
