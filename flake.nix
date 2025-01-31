@@ -2,36 +2,25 @@
   description = "Dependencies for benchmarking Pinocchio";
 
   inputs = {
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    cargo2nix.url = "github:cargo2nix/cargo2nix"; 
     nixpkgs.url =  "github:nixos/nixpkgs/nixos-24.11";
   };
 
-  outputs = { self, fenix, nixpkgs }:
+  outputs = { self, cargo2nix, nixpkgs }:
     let
       system = "x86_64-linux";
-      overlays = [ fenix.overlays.default ];
+      overlays = [ cargo2nix.overlays.default ];
       
       pkgs = import nixpkgs {
         inherit system overlays;
       };
 
-      toolchain = fenix.packages.${system}.latest.toolchain;
-      rustPlatform = pkgs.makeRustPlatform {
-        cargo = toolchain;
-        rustc = toolchain;
+      rustPkgs = pkgs.rustBuilder.makePackageSet {
+        rustVersion = "1.75.0";
+        packageFun = import ./Cargo.nix;
       };
       
-      rigidbody = rustPlatform.buildRustPackage {
-        pname = "rigidbody";
-        version = "0.0.1";
-        src = ./.;
-
-        crateType = "cdylib";
-        cargoLock.lockFile = ./Cargo.lock;
-      };
+      rigidbody = (rustPkgs.workspace.rigidbody {} );
       
       bindings = pkgs.stdenv.mkDerivation {
         pname = "rigidbody-bindings";
@@ -73,7 +62,8 @@
       {
         packages.${system}.default = benchmark;
         apps.${system} = {
-          default = {type="app"; program="${bindings}/bin/main";};
+          default = {type="app"; program="${rigidbody}/bin/rigidbody";};
+          bindings = {type="app"; program="${bindings}/bin/main";};
           kinematics = {type = "app"; program="${benchmark}/bin/kinematics";};
           rnea = {type = "app"; program="${benchmark}/bin/rnea";};
         };

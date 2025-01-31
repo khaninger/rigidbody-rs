@@ -1,5 +1,5 @@
 #![allow(warnings)] // Suppress warning message on compile
-#![feature(test)]
+//#![feature(test)]
 
 use std::path::Path;
 use std::iter::zip;
