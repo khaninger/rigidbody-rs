@@ -54,8 +54,9 @@ impl Multibody {
 
     
     pub fn rnea(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
-        // Joint torques
-        let mut tau = [0.; 7];
+        let mut tau = [0.; 7]; // joint torques
+        let mut f = [SpatialForce::new(); 7];  // spatial forces on each link 
+        let mut jt_transforms = [Transform::identity(); 7]; // transform btwn links
 
         // Vel, acc, force of current link, in local link coordinates
         let mut v = SpatialVelocity::new();
@@ -63,30 +64,33 @@ impl Multibody {
             lin: Vector3::<Real>::new(0., 0., 9.81),
             rot: Vector3::<Real>::zeros()
         };
-        let mut f = [SpatialForce::new(); 7];
 
         for (i, jt) in self.0.iter().enumerate() {
             // Transform spatial vectors from parent to child link
-            let parent_to_link = jt.parent_to_child(q[i]); //_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
-
+            jt_transforms[i] = jt.parent_to_child(q[i]); //_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
+          
             // Velocity of the joint, expressed in child link coordinates
-            let vel_joint = body_jac*dq[i];  // vJ, (3.33)
+            //let vel_joint = body_jac*dq[i];  // vJ, (3.33)
+            let vel_joint = SpatialVelocity::z_rot(dq[i]); // vJ, (3.33)
 
             // Update velocity/acc of current link
-            v = parent_to_link*&v + &vel_joint;
-            a = parent_to_link*&a + &(body_jac*ddq[i]) + &(v.cross(&vel_joint));
+            v = jt_transforms[i]*&v;
+            v.rot[2] += dq[i];
+            
+            a = jt_transforms[i]*&a;
+            a.lin[0] += v.lin[1];  // cross product unrolled
+            a.lin[1] += -v.lin[0];
+            a.rot[0] += v.rot[1];
+            a.rot[1] += -v.rot[0];
+            a.rot[2] += ddq[i]; // jt acc
             
             f[i] = &jt.body*&a + &v.cross_star(&(&jt.body*&v));
-
-            //println!("jt {:?}\n   vel: {:?}\n   acc: {:?}\n force: {:?}", i+1, v, a, fi);
-            //println!("   parent_to_link: {:?}", parent_to_link);
-            //println!("mass: {:?} com: {:?}", jt.child_mass.mass(), jt.child_mass.local_com);
         }
         
         for (i, jt) in self.0.iter().enumerate().rev() {
-            tau[i] = body_jac*&f[i];
+            tau[i] = f[i].rot[2]; //body_jac*&f[i];
             if i > 0 {
-                let f_tr = jt.child_to_parent(q[i])*&f[i];
+                let f_tr = jt_transforms[i].inverse()*&f[i];
                 f[i-1] += f_tr;
             }
         };

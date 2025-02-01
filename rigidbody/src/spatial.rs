@@ -82,6 +82,14 @@ impl SpatialVelocity {
         SpatialVelocity{lin:Vector3::new(0.,0.,0.), rot:Vector3::new(0.,0.,0.)}
     }
 
+    #[inline(always)]
+    pub fn z_rot(v: Real) -> Self {
+        SpatialVelocity{
+            lin:Vector3::new(0., 0., 0.),
+            rot:Vector3::new(0., 0., v)
+        }
+    }
+    
     /// Transform the spatial velocity from the coordinate system in self.coord to world
     #[inline(always)]
     pub fn transform(&self, tr: &Transform) -> Self {
