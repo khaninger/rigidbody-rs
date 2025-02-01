@@ -28,26 +28,24 @@
         version = "0.0.1";
         src = ./rigidbody_bindings;
 
-        buildInputs = [
-          pkgs.gcc
-        ];
+        #buildInputs = [ pkgs.gcc ];
 
+        buildInputs = [pkgs.cmake];
         propagatedBuildInputs = [
           pkgs.pinocchio
           pkgs.eigen
           rigidbody_bindings
         ];
+        
 
-        configurePhase = "";
-        buildPhase = ''
-          mkdir -p $out/bin
-          g++ -o main main.cpp -L${rigidbody_bindings}/bin -I${pkgs.eigen}/include/eigen3 -L${pkgs.pinocchio}/lib -lpinocchio_default -lpinocchio_parsers -lrigidbody_bindings
-        '';
-
-        installPhase = ''
-          mkdir -p $out/bin
-          cp main $out/bin/
-        '';
+        #configurePhase = "echo $CMAKE_MODULE_PATH";
+        #buildPhase = ''
+        #  g++ -o main main.cpp -L${rigidbody_bindings}/bin -I${pkgs.eigen}/include/eigen3 -L${pkgs.pinocchio}/lib -lpinocchio_default -lpinocchio_parsers -lrigidbody_bindings
+        #'';
+        #installPhase = ''
+        #  mkdir -p $out/bin
+        #  cp main $out/bin/
+        #'';
       };
     in
       {
@@ -58,10 +56,14 @@
         };
         devShells.${system} = {        
           default = pkgs.mkShell {
-            packages = [
-              rigidbody
+            buildInputs = [
               rigidbody_bindings
+              pkgs.pinocchio
+              pkgs.eigen
             ];
+            shellHook = ''
+                export CMAKE_PREFIX_PATH=${pkgs.pinocchio}/lib/cmake/pinocchio:${pkgs.eigen}/share/eigen3/cmake:$CMAKE_PREFIX_PATH
+            ''; 
           };
         };
       };

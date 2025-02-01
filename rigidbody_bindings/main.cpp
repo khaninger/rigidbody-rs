@@ -28,7 +28,6 @@ Eigen::VectorXd runRNEA(const Eigen::VectorXd& q,
   //std::chrono::duration<double, std::milli> elapsed = end - start;
   //std::cout << std::setprecision(4) << "Joint configuration: " << q.transpose() << " - Time taken for forward kinematics: " << elapsed.count() << " ms" << std::endl;
   
-  auto joint_id = (pinocchio::JointIndex)model.njoints;
   return data.tau;
 }
 
@@ -38,12 +37,6 @@ Eigen::VectorXd cast_array(float* arr) {
   return vec;
 }
 
-void print(Eigen::VectorXd q, Eigen::VectorXd dq, Eigen::VectorXd ddq) {
-  std::cout << "  q:" << q.transpose() << std::endl;
-  std::cout << " dq:" << dq.transpose() << std::endl;
-  std::cout << "ddq:" << ddq.transpose() << std::endl;
-
-}
 
 int main() {
   Multibody* mb = multibody_new();
@@ -51,8 +44,10 @@ int main() {
   float q[7]   = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
   float dq[7]  = {0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f};
   float ddq[7] = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f};
-  
-  print(cast_array(q), cast_array(dq), cast_array(ddq));
+
+  std::cout << "  q:" << cast_array(q).transpose() << std::endl;
+  std::cout << " dq:" << cast_array(dq).transpose() << std::endl;
+  std::cout << "ddq:" << cast_array(ddq).transpose() << std::endl;
   
   Eigen::VectorXd pin_tau = runRNEA(cast_array(q), cast_array(dq), cast_array(ddq));
   std::cout << "pinocchio:    " << pin_tau.transpose() << std::endl;
