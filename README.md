@@ -47,6 +47,14 @@ Rapier has a great physics engine, but has high complexity to support arbitrary 
 Additionally, the forward dynamics essentially closed, and inverse dynamics not exposed over an interface. 
 
 
+## Getting started
+### Build
+    - If you just need the rust library `cargo` has you covered.
+    - If you want the CPP bindings:
+      - a `nix run` will build and run `rigidbody_bindings/main.cpp`
+      - the header `rigidbody_bindings/rigidbody.h` is made from `cbindgen`
+      - the crate is nix-ified with `cargo2nix`
+
 ## Library short intro
 
 ### Kinematics
