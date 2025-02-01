@@ -39,7 +39,6 @@ Eigen::VectorXd cast_array(float* arr) {
   return vec;
 }
 
-
 void print(Eigen::VectorXd q, Eigen::VectorXd dq, Eigen::VectorXd ddq) {
   std::cout << "  q:" << q.transpose() << std::endl;
   std::cout << " dq:" << dq.transpose() << std::endl;
@@ -52,7 +51,7 @@ int main() {
 
   float q[7]   = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
   float dq[7]  = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-  float ddq[7] = {5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+  float ddq[7] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
   
   print(cast_array(q), cast_array(dq), cast_array(ddq));
   

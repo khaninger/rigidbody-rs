@@ -26,10 +26,13 @@
       bindings = pkgs.stdenv.mkDerivation {
         pname = "rigidbody-bindings";
         version = "0.0.1";
-        src = ./cpp;
+        src = ./rigidbody_bindings;
 
         buildInputs = [
           pkgs.gcc
+        ];
+
+        propagatedBuildInputs = [
           pkgs.pinocchio
           pkgs.eigen
           rigidbody_bindings
@@ -46,32 +49,17 @@
           cp main $out/bin/
         '';
       };
-
-      benchmark = pkgs.stdenv.mkDerivation {
-        pname = "rigidbody-benchmark";
-        version = "0.0.1";
-        src = ./cpp;
-
-        buildInputs = [
-          pkgs.cmake
-          pkgs.gcc
-          pkgs.pinocchio
-          pkgs.eigen
-        ];
-      };        
     in
       {
-        packages.${system}.default = benchmark;
+        packages.${system}.default = bindings;
         apps.${system} = {
-          default = {type="app"; program="${rigidbody}/bin/rigidbody";}; # runs rigibody/src/main.rs 
-          bindings = {type="app"; program="${bindings}/bin/main";};      # runs cpp/main.cpp, linked again rigidboy_binings.so
-          kinematics = {type = "app"; program="${benchmark}/bin/kinematics";};
-          rnea = {type = "app"; program="${benchmark}/bin/rnea";};
+          default = {type="app"; program="${bindings}/bin/main";};      # runs cpp/main.cpp, linked again rigidboy_binings.so
+          rigidbody =  {type="app"; program="${rigidbody}/bin/rigidbody";}; # runs rigibody/src/main.rs 
         };
         devShells.${system} = {        
           default = pkgs.mkShell {
             packages = [
-              benchmark
+              rigidbody
               rigidbody_bindings
             ];
           };
