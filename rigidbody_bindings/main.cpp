@@ -29,7 +29,6 @@ Eigen::VectorXd runRNEA(const Eigen::VectorXd& q,
   //std::cout << std::setprecision(4) << "Joint configuration: " << q.transpose() << " - Time taken for forward kinematics: " << elapsed.count() << " ms" << std::endl;
   
   auto joint_id = (pinocchio::JointIndex)model.njoints;
-  //std::cout << std::setprecision(3) << data.tau.transpose() << std::endl;
   return data.tau;
 }
 
@@ -50,8 +49,8 @@ int main() {
   Multibody* mb = multibody_new();
 
   float q[7]   = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-  float dq[7]  = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-  float ddq[7] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+  float dq[7]  = {0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f};
+  float ddq[7] = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f};
   
   print(cast_array(q), cast_array(dq), cast_array(ddq));
   

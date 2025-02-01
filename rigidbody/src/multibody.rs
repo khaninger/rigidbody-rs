@@ -59,7 +59,7 @@ impl Multibody {
         // Vel, acc, force of current link, in local link coordinates
         let mut v = SpatialVelocity::new();
         let mut a = SpatialVelocity {
-            lin: Vector3::<Real>::new(0., 0., -9.81),
+            lin: Vector3::<Real>::new(0., 0., 9.81),
             rot: Vector3::<Real>::zeros()
         };
         let mut f = [SpatialForce::new(); 7];

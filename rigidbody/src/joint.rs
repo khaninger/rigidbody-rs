@@ -64,8 +64,11 @@ impl RevoluteJoint {
             link.inertial.origin.xyz[2] as Real,
         );
         let mass:Real = convert(link.inertial.mass);
-        let inertia = convert(link.inertial.inertia); 
-        let body = Rigidbody{mass, com: com, inertia};
+        let inertia_com:Matrix3<Real> = convert(link.inertial.inertia);
+        let translate_cr = com.coords.cross_matrix();
+        let inertia = inertia_com + mass*translate_cr*(translate_cr.transpose());
+        
+        let body = Rigidbody{mass, com, inertia};
         RevoluteJoint{axis, parent, body}
     }
 }
