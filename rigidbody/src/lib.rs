@@ -1,5 +1,5 @@
 #![allow(warnings)] // Suppress warning message on compile
-//#![feature(test)]
+#![feature(test)]
 
 mod spatial;
 mod joint;

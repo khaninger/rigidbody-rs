@@ -1,3 +1,4 @@
+//multibody.rs
 use std::path::Path;
 use std::iter::{zip, Iterator};
 use nalgebra::{
@@ -31,7 +32,7 @@ pub struct Multibody([RevoluteJoint; 7]);
 
 impl Multibody {
     pub fn from_urdf(path: &Path) -> Multibody {
-        let robot = parse_urdf_from_file(path).unwrap();
+        let robot = parse_urdf_from_file(path).expect("Error loading URDF");
         
         let mut jts = Vec::<RevoluteJoint>::new();
         
@@ -149,13 +150,13 @@ mod test{
 
     #[bench]
     fn bench_fwd_kin(b: &mut Bencher) {
-        let mb = Multibody::from_urdf(&Path::new("assets/fr3.urdf"));    
+        let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));    
         b.iter(|| { mb.fwd_kin(&[0.;7]); })        
     }
 
     #[bench]
     fn bench_rnea(b: &mut Bencher) {
-        let mb = Multibody::from_urdf(&Path::new("assets/fr3.urdf"));    
+        let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));    
         b.iter(|| { mb.rnea(&[0.;7], &[0.;7], &[0.;7]); })        
     }
 

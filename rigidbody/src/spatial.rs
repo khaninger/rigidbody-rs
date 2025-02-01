@@ -83,6 +83,7 @@ impl SpatialVelocity {
     }
 
     /// Transform the spatial velocity from the coordinate system in self.coord to world
+    #[inline(always)]
     pub fn transform(&self, tr: &Transform) -> Self {
         let rot = tr.rotation.inverse();
         SpatialVelocity {
@@ -92,6 +93,7 @@ impl SpatialVelocity {
     }
 
     ///(2.33) Cross product with another spatial velocity
+    #[inline(always)]
     pub fn cross(&self, other: &SpatialVelocity) -> SpatialVelocity {
         SpatialVelocity {
             lin: self.lin.cross(&other.rot) + other.lin.cross(&self.rot),
@@ -100,6 +102,7 @@ impl SpatialVelocity {
     }
 
     /// (2.34) Cross product with a spatial force
+    #[inline(always)]
     pub fn cross_star(&self, f: &SpatialForce) -> SpatialForce {
         SpatialForce {
             lin: self.rot.cross(&f.lin),
@@ -126,6 +129,7 @@ impl From<SpatialVelocity> for Vector6<Real> {
 impl Mul<Real> for SpatialVelocity {
     type Output = SpatialVelocity;
 
+    #[inline(always)]
     fn mul(self, a: Real) -> SpatialVelocity {
         SpatialVelocity{lin: &self.lin*a, rot: &self.rot*a}
     }
@@ -134,6 +138,7 @@ impl Mul<Real> for SpatialVelocity {
 impl Add<&SpatialVelocity> for SpatialVelocity {
     type Output = Self;
 
+    #[inline(always)]
     fn add(self, other: &Self) -> Self {
         Self {lin: self.lin+other.lin, rot: self.rot+other.rot}
     }
@@ -142,6 +147,7 @@ impl Add<&SpatialVelocity> for SpatialVelocity {
 impl Mul<&SpatialForce> for SpatialVelocity {
     type Output = Real;
 
+    #[inline(always)]
     fn mul(self, f: &SpatialForce) -> Real {
         *(self.lin.transpose()*&f.lin + self.rot.transpose()*&f.rot).as_scalar()
     }
@@ -165,12 +171,14 @@ pub struct SpatialForce {
 impl Add<&SpatialForce> for SpatialForce {
     type Output = Self;
 
+    #[inline(always)]
     fn add(self, other: &Self) -> Self {
         Self {lin: self.lin+other.lin, rot: self.rot+other.rot}
     }
 }
 
 impl AddAssign for SpatialForce {
+    #[inline(always)]
     fn add_assign(&mut self, other: Self) {
         self.lin += other.lin;
         self.rot += other.rot
@@ -180,6 +188,7 @@ impl AddAssign for SpatialForce {
 impl Mul<&SpatialForce> for Transform {
     type Output = SpatialForce;
 
+    #[inline(always)]
     fn mul(self, f: &SpatialForce) -> SpatialForce {
         f.transform(&self)
     }
@@ -206,6 +215,7 @@ impl SpatialForce {
     }
     
     /// (2.25) Transform the spatial force from the coordinate system in self.coord to world
+    #[inline(always)]
     pub fn transform(&self, tr: &Transform) -> Self {
         let rot = tr.rotation.inverse();
         SpatialForce {
@@ -215,6 +225,7 @@ impl SpatialForce {
     }
 
     /// (2.27)
+    #[inline(always)]
     pub fn inv_transform(&self, tr: &Transform) -> Self {
         let rot_inv = tr.rotation.inverse();
         let new_lin = rot_inv*self.lin;

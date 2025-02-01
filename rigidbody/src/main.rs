@@ -1,16 +1,18 @@
-#![allow(warnings)] // Suppress warning message on compile
-//#![feature(test)]
-
 use std::path::Path;
-use std::iter::zip;
 use std::time::{Duration, Instant};
 
 use rigidbody::multibody::*;
 
-use nalgebra::{Vector3, Isometry3};
+use nalgebra::{Vector3, Isometry3, UnitQuaternion};
 
 fn main() { 
+    let R= UnitQuaternion::<Real>::from_scaled_axis(Vector3::zeros());
+    let T = Isometry3::identity();
+
+    let p = R*T;
+    
     let mb = Multibody::from_urdf(&Path::new("assets/fr3.urdf"));
+
     let q = &[0.; 7];
     let dq = &[0.; 7];
     let ddq = &[0.; 7];

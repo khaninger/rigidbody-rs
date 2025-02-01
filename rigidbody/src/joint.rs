@@ -1,3 +1,4 @@
+//joint.rs
 use std::path::Path;
 use std::iter::{zip, Iterator};
 use nalgebra::{
@@ -30,20 +31,21 @@ pub struct RevoluteJoint  {
 
 impl RevoluteJoint {
     /// Transformation from the child coordinate system to the parent, used for reverse iteration
+    #[inline(always)]
     pub fn parent_to_child(&self, q: Real) -> Transform {
-        //assert!(*child.coord_frame == self.child, "Child argument is not expressed in correct coordinate system")
         self.parent*self.joint_transform(q)
     }
 
     /// Transformation from parent coordinate system to the child
+    #[inline(always)]
     pub fn child_to_parent(&self, q: Real) -> Transform {
         self.joint_transform(-q)*(self.parent.inverse())
     }
 
     /// Transformation of the joint itself
-    pub fn joint_transform(&self, q: Real) -> Transform {
-        let jt_rot = UnitQuaternion::from_scaled_axis(self.axis.scale(q));
-        Transform{translation: Translation3::identity(), rotation: jt_rot}
+    #[inline(always)]
+    pub fn joint_transform(&self, q: Real) -> UnitQuaternion<Real> {
+        UnitQuaternion::from_scaled_axis(self.axis.scale(q))
     }
     
     pub fn from_xurdf_joint(
