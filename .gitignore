@@ -1,1 +1,4 @@
-target/
+**/build/
+**/target/
+cpp/result
+main
