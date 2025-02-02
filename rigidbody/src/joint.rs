@@ -31,8 +31,11 @@ pub struct RevoluteJoint  {
 
 impl RevoluteJoint {
     pub fn parent_to_child_mut(&self, q: Real, tr: &mut Transform) {
-        tr.append_rotation_mut(&self.joint_transform(q));
-        tr.translation.vector += self.parent.translation.vector;
+        //TODO These are just roughed in to get an idea of the time savings it might have
+        //     But pretty sure these are not matching the operations yet
+        tr.rotation = &self.joint_transform(q) * tr.rotation;
+        //tr.append_rotation_mut(&self.joint_transform(q));
+        tr.translation.vector =  self.parent.translation.vector;
         //*tr = self.parent*self.joint_transform(q)*(*tr);
     }
 
