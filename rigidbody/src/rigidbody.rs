@@ -3,7 +3,7 @@ use nalgebra::{OPoint, U3, Matrix3};
 use crate::{Real};
 use crate::spatial::{SpatialVelocity, SpatialForce};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Rigidbody {
     pub mass: Real,
     pub com: OPoint<Real, U3>,

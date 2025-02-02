@@ -46,17 +46,19 @@ impl Multibody {
     }
 
     pub fn fwd_kin (&self, q: &[Real; 7]) -> Transform {        
-        zip(self.0.iter(), q.iter()).rev().fold(
-            Isometry3::identity(),
-            | tr, (jt, qi)| { jt.parent_to_child(*qi)*tr }
-        )
+        let mut tr = Transform::identity();
+        for (jt, qi) in zip(self.0.iter(), q.iter()).rev() {
+            tr = jt.parent_to_child(*qi)*tr;
+        }
+        tr            
     }
 
-    pub fn fwd_kin_mut (&self, q: &[Real; 7], init_tr: &mut Transform) {        
-        zip(self.0.iter(), q.iter()).rev().fold(
-            init_tr,
-            | tr, (jt, qi)| { jt.parent_to_child_mut(*qi, tr); tr }
+    pub fn fwd_kin_mut (&self, q: &[Real; 7]) -> Transform {        
+        let mut tr = Transform::identity();
+        zip(self.0.iter(), q.iter()).rev().for_each(
+            | (jt, qi)| { jt.parent_to_child_mut(*qi, &mut tr) }
         );
+        tr
     }
 
     
@@ -169,8 +171,8 @@ mod test{
     #[bench]
     fn bench_fwd_kin_mut(b: &mut Bencher) {
         let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
-        let mut tr_init = Transform::identity();
-        b.iter(|| { mb.fwd_kin_mut(&[0.;7], &mut tr_init); })        
+        //let mut tr_init = Transform::identity();
+        b.iter(|| { mb.fwd_kin_mut(&[0.;7]); })        
     }
 
 
@@ -178,8 +180,6 @@ mod test{
     fn bench_transform_allocate(b: &mut Bencher) {
         b.iter(|| { Transform::identity() })        
     }
-
-
     
     #[bench]
     fn bench_rnea(b: &mut Bencher) {
