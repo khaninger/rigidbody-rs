@@ -10,37 +10,41 @@ use rigidbody::multibody::*;
 use nalgebra::{Vector3, Isometry3, UnitQuaternion};
 
 extern crate test;
-use test::Bencher;
 use simba::simd::AutoF32x8;
 use simba::simd::SimdComplexField;
 
-fn vec_simd(q: AutoF32x8) -> AutoF32x8 {
-    q.simd_cos()
+fn vec_simd(q: AutoF32x8, T: &mut Isometry3<AutoF32x8>) {
+    T.translation.z = q.simd_cos()
 }
 
-fn vec_iter(q: &[f32; 8]) -> [f32; 8] {
-    q.iter()
-        .map(|&qi| qi.cos())
-        .collect::<Vec<_>>()
-        .try_into()
-        .expect("Failed to convert Vec to array")
+fn vec_iter(q: &[f32; 8], T:&mut [Isometry3<f32>; 8]) {
+    for (qi, Ti) in q.iter().zip(T.iter_mut()) {
+        Ti.translation.z = qi.cos();
+    }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test::Bencher;
 
-#[bench]
-fn bench_vec_simd(b: &mut Bencher) {
-    let q = AutoF32x8::ONE;
-    b.iter(|| {
-        vec_simd(q);
-    });
-}
+    #[bench]
+    fn bench_vec_simd(b: &mut Bencher) {
+        let q = AutoF32x8::ONE;
+        let mut T = Isometry3::<AutoF32x8>::identity();
+        b.iter(|| {
+            vec_simd(q, &mut T);
+        });
+    }
 
-#[bench]
-fn bench_vec_iter(b: &mut Bencher) {
-    let q = [1.0; 8];
-    b.iter(|| {
-        vec_iter(&q);
-    });
+    #[bench]
+    fn bench_vec_iter(b: &mut Bencher) {
+        let q = [1.0; 8];
+        let mut T = [Isometry3::<f32>::identity(); 8];
+        b.iter(|| {
+            vec_iter(&q, &mut T);
+        });
+    }
 }
 
 fn kin_test() {
@@ -65,15 +69,15 @@ fn kin_test() {
 }
 
 fn main() {
-    let q = AutoF32x8::ONE;
+    let q = AutoF32x8::ZERO;
     
     // Run SIMD version
-    let simd_result = vec_simd(q);
-    println!("{:?}", simd_result);
+    //let simd_result = vec_simd(q);
+    //println!("{:?}", simd_result);
 
     // Run iterative version
-    let iter_result = vec_iter(&[1.0; 8]);
-    println!("{:?}", iter_result);
+    //let iter_result = vec_iter(&[0.0; 8]);
+    //println!("{:?}", iter_result);
     
 
 }
