@@ -51,7 +51,6 @@ impl Multibody {
             | tr, (jt, qi)| { jt.parent_to_child(*qi)*tr }
         )
     }
-
     
     pub fn rnea(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
         let mut tau = [0.; 7]; // joint torques

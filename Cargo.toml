@@ -3,3 +3,4 @@ members = [
     "rigidbody",
     "rigidbody_bindings"
 ]
+resolver = "2"

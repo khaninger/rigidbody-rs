@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 itertools = "0.14.0"
+simba = {version="*", features=["portable_simd"]}
 nalgebra = "0.33.2"
 parry3d = "0.17.4"
 xurdf = "0.2.5"
