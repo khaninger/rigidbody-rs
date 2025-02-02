@@ -30,6 +30,10 @@ pub struct RevoluteJoint  {
 }
 
 impl RevoluteJoint {
+    pub fn parent_to_child_mut(&self, q: Real, tr: &mut Transform) {
+        *tr = (*tr)*self.joint_transform(q);
+    }
+
     /// Transformation from the child coordinate system to the parent, used for reverse iteration
     #[inline(always)]
     pub fn parent_to_child(&self, q: Real) -> Transform {

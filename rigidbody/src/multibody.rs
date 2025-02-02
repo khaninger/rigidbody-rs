@@ -47,10 +47,18 @@ impl Multibody {
 
     pub fn fwd_kin (&self, q: &[Real; 7]) -> Transform {        
         zip(self.0.iter(), q.iter()).rev().fold(
-            Transform::identity(),
+            Isometry3::identity(),
             | tr, (jt, qi)| { jt.parent_to_child(*qi)*tr }
         )
     }
+
+    pub fn fwd_kin_mut (&self, q: &[Real; 7], init_tr: &mut Transform) {        
+        zip(self.0.iter(), q.iter()).rev().fold(
+            init_tr,
+            | tr, (jt, qi)| { jt.parent_to_child_mut(*qi, tr); tr }
+        );
+    }
+
     
     pub fn rnea(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
         let mut tau = [0.; 7]; // joint torques
@@ -157,6 +165,22 @@ mod test{
         b.iter(|| { mb.fwd_kin(&[0.;7]); })        
     }
 
+
+    #[bench]
+    fn bench_fwd_kin_mut(b: &mut Bencher) {
+        let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
+        let mut tr_init = Transform::identity();
+        b.iter(|| { mb.fwd_kin_mut(&[0.;7], &mut tr_init); })        
+    }
+
+
+    #[bench]
+    fn bench_transform_allocate(b: &mut Bencher) {
+        b.iter(|| { Transform::identity() })        
+    }
+
+
+    
     #[bench]
     fn bench_rnea(b: &mut Bencher) {
         let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));    
