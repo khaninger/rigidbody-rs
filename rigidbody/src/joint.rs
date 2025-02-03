@@ -9,6 +9,7 @@ use nalgebra::{
     Rotation3,
     Matrix3,
     UnitQuaternion,
+    Quaternion,
     Unit,
     OPoint,
     U3,
@@ -29,20 +30,30 @@ pub struct RevoluteJoint  {
     pub body: Rigidbody,
 }
 
+fn quat_mult(q: &UnitQuaternion<Real>, r: &UnitQuaternion<Real>) -> UnitQuaternion<Real> {
+    UnitQuaternion::new_unchecked( Quaternion::new(
+        q[3] * r[3] - q[0] * r[0] - q[1] * r[1] - q[2] * r[2],
+        q[3] * r[0] + q[0] * r[3] + q[1] * r[2] - q[2] * r[1],
+        q[3] * r[1] - q[0] * r[2] + q[1] * r[3] + q[2] * r[0],
+        q[3] * r[2] + q[0] * r[1] - q[1] * r[0] + q[2] * r[3]
+    ))
+}
+
 impl RevoluteJoint {
     pub fn parent_to_child_mut(&self, q: Real, tr: &mut Transform) {
         //TODO These are just roughed in to get an idea of the time savings it might have
         //     But pretty sure these are not matching the operations yet
-        tr.rotation = &self.joint_transform(q) * tr.rotation;
-        //tr.append_rotation_mut(&self.joint_transform(q));
-        tr.translation.vector =  self.parent.translation.vector;
+        tr.rotation = quat_mult(&self.joint_transform(q), &tr.rotation);
+        tr.rotation = quat_mult(&self.parent.rotation, &tr.rotation);
+        tr.append_translation_mut(&self.parent.translation);
+        //tr.translation.vector = self.parent.translation.vector;
         //*tr = self.parent*self.joint_transform(q)*(*tr);
     }
 
     /// Transformation from the child coordinate system to the parent, used for reverse iteration
     #[inline(always)]
     pub fn parent_to_child(&self, q: Real) -> Transform {
-        self.parent*self.joint_transform(q)
+        self.parent*&self.joint_transform(q)
     }
 
     /// Transformation from parent coordinate system to the child
