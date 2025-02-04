@@ -12,6 +12,25 @@ pub extern "C" fn multibody_new() -> *mut Multibody {
     Box::into_raw(Box::new(mb))
 }
 
+
+#[no_mangle]
+pub unsafe extern "C" fn multibody_rnea_ext<'a>(mb_ptr: *const Multibody,
+                                         q_: *const Real,
+                                         dq_: *const Real,
+                                         ddq_: *const Real) -> *const Real {
+  
+    let mb = mb_ptr.as_ref().unwrap();
+    let q = slice::from_raw_parts(q_, 7);
+    let dq = slice::from_raw_parts(dq_, 7);
+    let ddq = slice::from_raw_parts(ddq_, 7);
+    
+    //println!("Calling RNEA with\n    q:{:?}\n   dq:{:?}\n  ddq:{:?}", q, dq, ddq);
+   
+    let ptr = Box::into_raw(Box::new(mb.rnea(q, dq, ddq)));
+    ptr as *const Real
+}
+
+
 #[no_mangle]
 pub extern "C" fn multibody_rnea<'a>(q_: *const Real,
                                      dq_: *const Real,
