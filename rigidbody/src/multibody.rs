@@ -19,9 +19,7 @@ use parry3d::mass_properties::MassProperties;
 use itertools::izip;
 use crate::spatial::{SpatialForce, SpatialVelocity, BodyJacobian};
 use crate::joint::*;
-
-pub type Real = f32;
-pub type Transform = Isometry3<Real>;
+use crate::{Real, Transform};
 
 const body_jac: BodyJacobian = BodyJacobian::revolute_z();
 
@@ -82,16 +80,20 @@ impl Multibody {
             //let vel_joint = body_jac*dq[i];  // vJ, (3.33)
             let vel_joint = SpatialVelocity::z_rot(dq[i]); // vJ, (3.33)
 
-            // Update velocity/acc of current link
+            // Update velocity/acc of current link            
+            //v = jt_transforms[i]*&v + &vel_joint;
+            //a = jt_transforms[i]*&a + &(body_jac*ddq[i]) + &(v.cross(&vel_joint));
+
             v = jt_transforms[i]*&v;
             v.rot[2] += dq[i];
-            
-            a = jt_transforms[i]*&a;
-            a.lin[0] += v.lin[1];  // cross product unrolled
-            a.lin[1] += -v.lin[0];
-            a.rot[0] += v.rot[1];
-            a.rot[1] += -v.rot[0];
+               
+            a = jt_transforms[i]*&a; //+ &(v.cross(&vel_joint));
             a.rot[2] += ddq[i]; // jt acc
+
+            a.lin[0] += v.lin[1]*dq[i];  // cross product unrolled
+            a.lin[1] += -v.lin[0]*dq[i];
+            a.rot[0] += v.rot[1]*dq[i];
+            a.rot[1] += -v.rot[0]*dq[i];
             
             f[i] = &jt.body*&a + &v.cross_star(&(&jt.body*&v));
         }

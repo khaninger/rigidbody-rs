@@ -15,9 +15,7 @@ use nalgebra::{
     Point3,
     UnitQuaternion
 };
-
-type Real = f32;
-type Transform = Isometry3<Real>;
+use crate::{Real, Transform};
 
 impl Mul<&SpatialVelocity> for Transform {
     type Output = SpatialVelocity;

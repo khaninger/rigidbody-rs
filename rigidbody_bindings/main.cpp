@@ -31,9 +31,15 @@ Eigen::VectorXd runRNEA(const Eigen::VectorXd& q,
   return data.tau;
 }
 
-Eigen::VectorXd cast_array(float* arr) {
+Eigen::VectorXd cast_farray(float* arr) {
   Eigen::Map<Eigen::VectorXf> vec_float(arr, 7); 
   Eigen::VectorXd vec = vec_float.cast<double>();
+  return vec;
+}
+
+
+Eigen::VectorXd cast_darray(double* arr) {
+  Eigen::Map<Eigen::VectorXd> vec(arr, 7);
   return vec;
 }
 
@@ -41,19 +47,23 @@ Eigen::VectorXd cast_array(float* arr) {
 int main() {
   Multibody* mb = multibody_new();
 
-  float q[7]   = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-  float dq[7]  = {0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f};
-  float ddq[7] = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f};
+  double q[7]   = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+  double dq[7]  = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+  double ddq[7] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
 
-  std::cout << "  q:" << cast_array(q).transpose() << std::endl;
-  std::cout << " dq:" << cast_array(dq).transpose() << std::endl;
-  std::cout << "ddq:" << cast_array(ddq).transpose() << std::endl;
+  Eigen::VectorXd q_ = cast_darray(q);
+  Eigen::VectorXd dq_ = cast_darray(dq);
+  Eigen::VectorXd ddq_ = cast_darray(ddq);
+    
+  std::cout << "  q:" << q_.transpose() << std::endl;
+  std::cout << " dq:" << dq_.transpose() << std::endl;
+  std::cout << "ddq:" << ddq_.transpose() << std::endl;
   
-  Eigen::VectorXd pin_tau = runRNEA(cast_array(q), cast_array(dq), cast_array(ddq));
+  Eigen::VectorXd pin_tau = runRNEA(q_, dq_, ddq_);
   std::cout << "pinocchio:    " << pin_tau.transpose() << std::endl;
 
-  float* tau = multibody_rnea(q, dq, ddq); 
-  std::cout << "rigidbody-rs: " << cast_array(tau).transpose() << std::endl;
+  double* tau = multibody_rnea(q, dq, ddq); 
+  std::cout << "rigidbody-rs: " << cast_darray(tau).transpose() << std::endl;
   
   return 0;
 }

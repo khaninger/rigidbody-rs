@@ -1,5 +1,5 @@
 #![allow(warnings)] // Suppress warning message on compile
-#![feature(test)]
+//#![feature(test)]
 
 mod spatial;
 mod joint;
@@ -10,7 +10,7 @@ pub use spatial::*;
 pub use joint::*;
 pub use multibody::*;
 
-pub type Real = f32;
+pub type Real = f64;
 pub type Transform = nalgebra::Isometry3<Real>;
 
 

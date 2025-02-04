@@ -1,6 +1,6 @@
-#![feature(portable_simd)]
-#![feature(test)]
-
+//#![feature(portable_simd)]
+//#![feature(test)]
+//extern crate test;
 
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -9,7 +9,6 @@ use rigidbody::multibody::*;
 
 use nalgebra::{Vector3, Isometry3, UnitQuaternion};
 
-extern crate test;
 
 fn kin_test() {
 
