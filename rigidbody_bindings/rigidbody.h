@@ -9,7 +9,8 @@ struct Multibody; // Forward declaration
 
 // Function declarations
 Multibody* multibody_new();
-float* multibody_rnea(const float q[7], const float dq[7], const float ddq[7]);
+double* multibody_fwd_kin(const Multibody*, const double q[7]);
+double* multibody_rnea(const Multibody*, const double q[7], const double dq[7], const double ddq[7]);
 void multibody_free(Multibody* mb);
 
 #ifdef __cplusplus
