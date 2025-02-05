@@ -309,7 +309,7 @@ fn vel_transform() {
 
     let theta = std::f32::consts::FRAC_PI_2;
     let X2 = Transform {
-        rotation: UnitQuaternion::from_axis_angle(&Vector3::z_axis(), theta),
+        rotation: UnitQuaternion::from_axis_angle(&Vector3::z_axis(), theta as Real),
         translation: Translation3::new(0.,0.,0.)
     };
     let X2_feath = transform_to_B_X_A(X2);
@@ -351,7 +351,7 @@ fn force_transform() {
     let theta = std::f32::consts::FRAC_PI_2;
     let X2 = Transform {
         rotation: UnitQuaternion::from_axis_angle(&Vector3::z_axis(),
-                                                  theta),
+                                                  theta as Real),
         translation: Translation3::new(0.3,0.5,0.)
     };
     let X2_feath = transform_to_B_X_A_star(X2.clone());

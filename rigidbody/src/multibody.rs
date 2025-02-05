@@ -50,15 +50,6 @@ impl Multibody {
         }
         tr            
     }
-
-    pub fn fwd_kin_mut (&self, q: &[Real]) -> Transform {        
-        let mut tr = Transform::identity();
-        zip(self.0.iter(), q.iter()).rev().for_each(
-            | (jt, qi)| { jt.parent_to_child_mut(*qi, &mut tr) }
-        );
-        tr
-    }
-
     
     pub fn rnea(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
         let mut tau = [0.; 7]; // joint torques
@@ -83,7 +74,6 @@ impl Multibody {
             // Update velocity/acc of current link            
             //v = jt_transforms[i]*&v + &vel_joint;
             //a = jt_transforms[i]*&a + &(body_jac*ddq[i]) + &(v.cross(&vel_joint));
-
             v = jt_transforms[i]*&v;
             v.rot[2] += dq[i];
                
@@ -99,7 +89,8 @@ impl Multibody {
         }
         
         for (i, jt) in self.0.iter().enumerate().rev() {
-            tau[i] = f[i].rot[2]; //body_jac*&f[i];
+            //tau[i] = body_jac*&f[i];
+            tau[i] = f[i].rot[2];
             if i > 0 {
                 let f_tr = jt_transforms[i].inverse()*&f[i];
                 f[i-1] += f_tr;
@@ -107,11 +98,8 @@ impl Multibody {
         };
 
         tau
-        //println!("vel: {:?}", v);
-        //println!("acc: {:?}", a);
-        //println!("tau: {:?}", tau);
     }
-    /*
+    
     pub fn rnea_zip(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
         // Vel, acc, force of current link, in local link coordinates
         let mut v = SpatialVelocity::new();
@@ -120,26 +108,29 @@ impl Multibody {
             rot: Vector3::<Real>::zeros()
         };
         
-        let f_vec = Vec::<SpatialForce>::new();
-        
         let mut f: [SpatialForce; 7] = izip!(self.0.iter(), q.iter(), dq.iter(), ddq.iter()).map(
             |(jt, &qi, &dqi, &ddqi)| {
-                // Transform spatial vectors from parent to child link
-                let parent_to_link = jt.parent_to_child(qi); //_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
+                let jt_transform = jt.parent_to_child(qi); //_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
 
                 // Velocity of the joint, expressed in child link coordinates
-                let vel_joint = body_jac*dqi;  // vJ, (3.33)
+                //let vel_joint = body_jac*dq[i];  // vJ, (3.33)
+                let vel_joint = SpatialVelocity::z_rot(dqi); // vJ, (3.33)
 
-                v = parent_to_link*&v + vel_joint;
-                a = parent_to_link*&a + body_jac*ddqi; // + cJ // + v.cross(vel_joint);
-                let I = jt.child_inertia;
-                let c = jt.child_mass_prop.local_com.coords;
-                let m = jt.child_mass_prop.mass();
-                
-                SpatialForce {
-                    lin: a.lin*m - c.cross(&a.rot),
-                    rot: I*a.rot + c.cross(&a.lin)*m// + v.gcross_matrix()*I*v-Xj*f;
-                }
+                // Update velocity/acc of current link            
+                //v = jt_transforms[i]*&v + &vel_joint;
+                //a = jt_transforms[i]*&a + &(body_jac*ddq[i]) + &(v.cross(&vel_joint));
+                v = jt_transform*&v;
+                v.rot[2] += dqi;
+
+                a = jt_transform*&a; //+ &(v.cross(&vel_joint));
+                a.rot[2] += ddqi; // jt acc
+
+                a.lin[0] += v.lin[1]*dqi;  // cross product unrolled
+                a.lin[1] += -v.lin[0]*dqi;
+                a.rot[0] += v.rot[1]*dqi;
+                a.rot[1] += -v.rot[0]*dqi;
+
+                &jt.body*&a + &v.cross_star(&(&jt.body*&v))
             }
         ).collect::<Vec<_>>().try_into().expect("Direclty build forces");
 
@@ -152,7 +143,7 @@ impl Multibody {
             }
         ).collect::<Vec<_>>().try_into().expect("Directly build torques")
 }
-    */
+
 }
 
 
@@ -169,15 +160,6 @@ mod test{
         b.iter(|| { mb.fwd_kin(&[0.;7]); })        
     }
 
-
-    #[bench]
-    fn bench_fwd_kin_mut(b: &mut Bencher) {
-        let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
-        //let mut tr_init = Transform::identity();
-        b.iter(|| { mb.fwd_kin_mut(&[0.;7]); })        
-    }
-
-
     #[bench]
     fn bench_transform_allocate(b: &mut Bencher) {
         b.iter(|| { Transform::identity() })        
@@ -189,9 +171,9 @@ mod test{
         b.iter(|| { mb.rnea(&[0.;7], &[0.;7], &[0.;7]); })        
     }
 
-    /*#[bench]
+    #[bench]
     fn bench_rneazip(b: &mut Bencher) {
-        let mb = Multibody::from_urdf(&Path::new("assets/fr3.urdf"));    
+        let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));    
         b.iter(|| { mb.rnea_zip(&[0.;7], &[0.;7], &[0.;7]); })        
-    }*/
+    }
 }

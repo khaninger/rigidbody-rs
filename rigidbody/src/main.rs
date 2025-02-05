@@ -1,7 +1,3 @@
-//#![feature(portable_simd)]
-//#![feature(test)]
-//extern crate test;
-
 use std::path::Path;
 use std::time::{Duration, Instant};
 

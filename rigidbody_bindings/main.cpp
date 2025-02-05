@@ -65,7 +65,6 @@ void bench_rigidbody(double* q, double* dq, double* ddq) {
   Eigen::Map<Eigen::VectorXd> vec(pos, 3);
   std::cout << "rigidbody: " << vec.transpose() << std::endl;
 }
-
   
 int main() {
   double q[7]   = {0.0f, 1.0f, 1.0f, .0f, 0.0f, 0.0f, 0.0f};
