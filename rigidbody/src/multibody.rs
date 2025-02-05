@@ -43,7 +43,7 @@ impl Multibody {
         Multibody(jts.try_into().unwrap())
     }
 
-    pub fn fwd_kin (&self, q: &[Real; 7]) -> Transform {        
+    pub fn fwd_kin (&self, q: &[Real]) -> Transform {        
         let mut tr = Transform::identity();
         for (jt, qi) in zip(self.0.iter(), q.iter()).rev() {
             tr = jt.parent_to_child(*qi)*tr;
@@ -51,7 +51,7 @@ impl Multibody {
         tr            
     }
 
-    pub fn fwd_kin_mut (&self, q: &[Real; 7]) -> Transform {        
+    pub fn fwd_kin_mut (&self, q: &[Real]) -> Transform {        
         let mut tr = Transform::identity();
         zip(self.0.iter(), q.iter()).rev().for_each(
             | (jt, qi)| { jt.parent_to_child_mut(*qi, &mut tr) }
