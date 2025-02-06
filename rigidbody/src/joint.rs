@@ -20,14 +20,14 @@ use parry3d::mass_properties::MassProperties;
 use itertools::izip;
 use crate::spatial::{SpatialForce, SpatialVelocity, BodyJacobian};
 use crate::{Real, Transform};
-use crate::rigidbody::Rigidbody;
+use crate::rigidbody::RigidbodyInertia;
 
 /// An explicit revolute joint with a single degree of freedom
 #[derive(Debug)]
 pub struct RevoluteJoint  {
     pub axis: Unit<Vector3<Real>>, // Normed axis for the revolute joint
     pub parent: Transform, // Pose of joint coord system relative to parent
-    pub body: Rigidbody,
+    pub body: RigidbodyInertia,
 }
 
 impl RevoluteJoint {
@@ -71,7 +71,7 @@ impl RevoluteJoint {
         let translate_cr = com.coords.cross_matrix();
         let inertia = inertia_com + mass*translate_cr*(translate_cr.transpose());
         
-        let body = Rigidbody{mass, com, inertia};
+        let body = RigidbodyInertia{mass, com, inertia, ..Default::default()};
         RevoluteJoint{axis, parent, body}
     }
 }

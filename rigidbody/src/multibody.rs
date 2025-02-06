@@ -8,17 +8,20 @@ use nalgebra::{
     Translation3,
     Rotation3,
     Matrix3,
+    Matrix,
     UnitQuaternion,
     Unit,
     OPoint,
     U3,
-    convert
+    convert,
+    Const        
 };
 use xurdf::{Robot, Link, Joint, parse_urdf_from_file};
 use parry3d::mass_properties::MassProperties;
 use itertools::izip;
 use crate::spatial::{SpatialForce, SpatialVelocity, BodyJacobian};
 use crate::joint::*;
+use crate::rigidbody::RigidbodyInertia;
 use crate::{Real, Transform};
 
 const body_jac: BodyJacobian = BodyJacobian::revolute_z();
@@ -142,8 +145,23 @@ impl Multibody {
                 taui
             }
         ).collect::<Vec<_>>().try_into().expect("Directly build torques")
-}
+    }
 
+    pub fn crba(&self, q: &[Real]) -> &[Real] {
+        let H = Matrix::<Real, Const<7>, Const<7>, _>::identity();
+        let I: [&RigidbodyInertia; 7] = self.0.iter()
+            .map(|jt| {&jt.body})
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("Directly build inertias");
+        for i in 7..0 {
+            let jt_transform = self.0[i].parent_to_child(q[i]);
+            if i > 0 {
+                //I[i-1] += 
+            }
+        }
+        &[0.;7]
+    }
 }
 
 
