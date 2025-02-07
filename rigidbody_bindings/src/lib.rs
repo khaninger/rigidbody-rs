@@ -31,18 +31,16 @@ pub unsafe extern "C" fn multibody_rnea<'a>(mb_ptr: *const Multibody,
 #[no_mangle]
 pub unsafe extern "C" fn multibody_crba<'a>(mb_ptr: *const Multibody,
                                             q_: *const Real,
-) -> *const Real {
+) -> *mut [Real] {
   
     let mb = mb_ptr.as_ref().unwrap();
     let q = slice::from_raw_parts(q_, 7);
 
     let H = mb.crba(q);
-    let ptr = Box::into_raw(Box::new(H));
-    
-    //let flat_H: Vec<Real> = H.iter().cloned().collect();
-    //let buf = flat_H.into_boxed_slice();
-    //let ptr = buf.as_ptr();
-    ptr as *const Real
+    let flat_H: [Real; 49] = H.iter().cloned().collect::<Vec<_>>().try_into().expect("Convert");
+    let boxed_H = Box::new(flat_H);
+    let ptr = Box::into_raw(boxed_H);
+    ptr
 }
 
 
