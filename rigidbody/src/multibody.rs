@@ -14,7 +14,8 @@ use nalgebra::{
     OPoint,
     U3,
     convert,
-    Const        
+    Const,
+    SMatrix
 };
 use xurdf::{Robot, Link, Joint, parse_urdf_from_file};
 use parry3d::mass_properties::MassProperties;
@@ -145,20 +146,21 @@ impl Multibody {
         ).collect::<Vec<_>>().try_into().expect("Directly build torques")
     }
     
-    pub fn crba(&self, q: &[Real]) -> &[Real] {
-        let H = Matrix::<Real, Const<7>, Const<7>, _>::identity();
-        let I: [&Inertia; 7] = self.0.iter()
-            .map(|jt| {&jt.body})
+    pub fn crba(&self, q: &[Real]) -> SMatrix::<Real, 7, 7> {
+        let mut H = Matrix::<Real, Const<7>, Const<7>, _>::identity();
+        let mut I: [Inertia; 7] = self.0.iter()
+            .map(|jt| {jt.body.clone()})
             .collect::<Vec<_>>()
             .try_into()
             .expect("Directly build inertias");
-        for i in 7..0 {
+        for i in (0..7).rev() {
             let jt_transform = self.0[i].parent_to_child(q[i]);
             if i > 0 {
-                //I[i-1] += 
+                I[i-1] += I[i].transform(jt_transform);
             }
+            H[(i,i)] = I[i].get_rotz(); 
         }
-        &[0.;7]
+        H
     }
 }
 
@@ -191,5 +193,12 @@ mod test{
     fn bench_rneazip(b: &mut Bencher) {
         let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));    
         b.iter(|| { mb.rnea_zip(&[0.;7], &[0.;7], &[0.;7]); })        
+    }
+
+    #[test]
+    fn test_crba() {
+        let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
+        let H = mb.crba(&[0.; 7]);
+        println!("{}", H);
     }
 }

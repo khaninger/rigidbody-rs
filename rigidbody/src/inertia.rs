@@ -1,4 +1,4 @@
-use std::ops::Mul;
+use std::ops::{Mul, AddAssign};
 use nalgebra::{OPoint, U3, Matrix3, Matrix6, Vector3, Translation3, convert};
 use crate::{Real, Transform};
 use crate::spatial::{
@@ -52,7 +52,6 @@ impl Inertia {
             ll[(2,0)], ll[(2,1)], ll[(2,2)],   0., 0., m,
         )
     }        
-        
 
     /// Transform inertia to a different coordinate system.
     /// (2.66): ^BI = ^BX_A^* ^AI ^AX_B
@@ -71,6 +70,18 @@ impl Inertia {
         //let cross_term = rot*translate_cr*(-self.mass)*(rot.transpose());
         let com = tr*self.com;
         Inertia::new(self.mass.clone(), com, self.inertia_com.clone())
+    }
+
+    pub fn get_rotz(&self) -> Real {
+        self.inertia[(2,2)]
+    }
+}
+
+impl AddAssign<Inertia> for Inertia {
+    fn add_assign(&mut self, other: Inertia) {
+        self.com = ((self.mass*self.com.coords+other.mass*other.com.coords)/(self.mass+other.mass)).into();
+        self.mass += other.mass;
+        self.inertia += other.inertia;
     }
 }
 
@@ -98,15 +109,15 @@ fn test_inertia_transform() {
     let bxastar = transform_to_B_X_A_star(tr_inv.clone());
     let axb = transform_to_A_X_B(tr_inv);
 
-    println!("rb6: {}", rb6);
-    println!("axb: {}", axb);
-    println!("rb6*axb: {}", rb6*axb);    
-    println!("bxastar: {}", bxastar);
+    //println!("rb6: {}", rb6);
+    //println!("axb: {}", axb);
+    //println!("rb6*axb: {}", rb6*axb);    
+    //println!("bxastar: {}", bxastar);
     let rb26_ = bxastar*rb6*axb;
     let rb26 = rb2.clone().to_matrix6();
     
-    println!("feather: {}", rb26_);
-    println!("hand:    {}", rb26);
+    //println!("feather: {}", rb26_);
+    //println!("hand:    {}", rb26);
 }
 
 
