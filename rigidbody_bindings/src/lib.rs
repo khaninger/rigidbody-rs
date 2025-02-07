@@ -37,10 +37,11 @@ pub unsafe extern "C" fn multibody_crba<'a>(mb_ptr: *const Multibody,
     let q = slice::from_raw_parts(q_, 7);
 
     let H = mb.crba(q);
+    let ptr = Box::into_raw(Box::new(H));
     
-    let flat_H: Vec<Real> = H.iter().cloned().collect();
-    let buf = flat_H.into_boxed_slice();
-    let ptr = buf.as_ptr();
+    //let flat_H: Vec<Real> = H.iter().cloned().collect();
+    //let buf = flat_H.into_boxed_slice();
+    //let ptr = buf.as_ptr();
     ptr as *const Real
 }
 
