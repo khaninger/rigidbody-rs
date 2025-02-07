@@ -1,0 +1,22 @@
+
+[package]
+name = "rigidbody"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+itertools = "0.14.0"
+nalgebra = "0.33.2"
+parry3d = "0.17.4"
+xurdf = "0.2.5"
+
+# This exports a rigidbody.so in targets, but somehow breaks imports in main.rs
+#[lib]
+#crate-type = ["cdylib"]
+
+
+[[example]]
+  name = "rigidbody"
+  path = "src/lib.rs"
+  crate-type = ["cdylib"]
+

@@ -1,0 +1,12 @@
+
+[package]
+name = "rigidbody-bindings"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rigidbody = { path = "../rigidbody" }
+
+# This exports a rigidbody.so in targets, but somehow breaks imports in main.rs
+[lib]
+crate-type = ["cdylib"]

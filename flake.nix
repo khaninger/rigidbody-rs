@@ -2,123 +2,76 @@
   description = "Dependencies for benchmarking Pinocchio";
 
   inputs = {
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    cargo2nix.url = "github:cargo2nix/cargo2nix"; 
     nixpkgs.url =  "github:nixos/nixpkgs/nixos-24.11";
   };
 
-  outputs = { self, fenix, nixpkgs }:
+  outputs = { self, cargo2nix, nixpkgs }:
     let
       system = "x86_64-linux";
-      overlays = [ fenix.overlays.default ];
+      overlays = [
+        cargo2nix.overlays.default
+        (final: prev: {
+          rustc = prev.rustc.overrideAttrs (old: {
+            src = pkgs.fetchFromGitHub {
+              owner = "EnzymeAD";
+              repo = "rust";
+              rev = "master"; # Replace with specific commit/tag if needed
+              sha256 = "sha256-MlK2ss22AGOzrnvJXgsqD1177QGurjlvRC5gluDfFzI="; # Replace after first build
+              #depth = 1;
+            };
+          });
+        })
+      ];
       
       pkgs = import nixpkgs {
         inherit system overlays;
       };
 
-      rustEnzyme = pkgs.stdenv.mkDerivation {
-          name = "rust-enzyme";
-          src = pkgs.fetchFromGitHub {
-            owner = "EnzymeAD";
-            repo = "rust";
-            rev = "master"; # Replace with specific commit/tag if needed
-            sha256 = "0000000000000000000000000000000000000000000000000000"; # Replace after first build
-            depth = 1;
-          };
-
-          buildInputs = with pkgs; [
-            clang
-            cmake
-            ninja
-            pkg-config
-            python3
-            curl
-            libssl.dev
-            build-essential
-          ];
-
-          configurePhase = ''
-            ./configure \
-              --enable-llvm-link-shared \
-              --enable-llvm-plugins \
-              --enable-llvm-enzyme \
-              --release-channel=nightly \
-              --enable-llvm-assertions \
-              --enable-clang \
-              --enable-lld \
-              --enable-option-checking \
-              --enable-ninja \
-              --disable-docs
-          '';
-
-          buildPhase = ''
-            ./x dist
-          '';
-
-          installPhase = ''
-            mkdir -p $out
-            cp -r build/dist/* $out/
-          '';
-        };
-      
-      toolchain = fenix.packages.${system}.latest.toolchain;
-      rustPlatform = pkgs.makeRustPlatform {
-        cargo = toolchain;
-        rustc = toolchain;
+      rustPkgs = pkgs.rustBuilder.makePackageSet {
+        rustVersion = "1.75.0";
+        packageFun = import ./Cargo.nix;
       };
       
-      rigidbody = rustPlatform.buildRustPackage {
-        pname = "rigidbody";
-        version = "0.0.1";
-        src = ./.;
+      rigidbody = (rustPkgs.workspace.rigidbody {});
+      rigidbody_bindings = (rustPkgs.workspace.rigidbody-bindings {});
 
-        crateType = "cdylib";
-        cargoLock.lockFile = ./Cargo.lock;
-      };
-      
-      benchmark = pkgs.stdenv.mkDerivation {
-        pname = "rigidbody-benchmark";
+      bindings = pkgs.stdenv.mkDerivation {
+        pname = "rigidbody-bindings";
         version = "0.0.1";
-        src = ./cpp;
+        src = ./rigidbody_bindings;
 
-        buildInputs = [
-          pkgs.gcc
+        #buildInputs = [ pkgs.gcc ];
+
+        buildInputs = [pkgs.cmake];
+        propagatedBuildInputs = [
           pkgs.pinocchio
           pkgs.eigen
-          rigidbody
+          rigidbody_bindings
         ];
-
-        configurePhase = "";
-        buildPhase = ''
-          mkdir -p $out/bin
-          echo ${rigidbody}
-          ls ${rigidbody}/bin
-          g++ -o main main.cpp -L${rigidbody}/bin -lrigidbody
-        '';
-
-        installPhase = ''
-          mkdir -p $out/bin
-          cp build/main $out/bin/
-        '';
       };
     in
       {
-        packages.${system}.default = benchmark;
-        apps.${system} = {
-          #default = {type="app"; program="${benchmark}/bin/main";};
-          kinematics = {type = "app"; program="${benchmark}/bin/kinematics";};
-          rnea = {type = "app"; program="${benchmark}/bin/rnea";};
+        packages.${system} = {
+          default = bindings;
+          enzyme = pkgs.rustc;
         };
-        devShells = {        
+        apps.${system} = {
+          default = {type="app"; program="${bindings}/bin/main";};      # runs cpp/main.cpp, linked again rigidboy_binings.so
+          rigidbody =  {type="app"; program="${rigidbody}/bin/rigidbody";}; # runs rigibody/src/main.rs 
+        };
+        devShells.${system} = {        
           default = pkgs.mkShell {
-            packages = [
-              #benchmark
-              #rigidbody
-              rustEnzyme
+            buildInputs = [
+              rigidbody_bindings
+              pkgs.pinocchio
+              pkgs.eigen
             ];
+            shellHook = ''
+                export CMAKE_PREFIX_PATH=${pkgs.pinocchio}/lib/cmake/pinocchio:${pkgs.eigen}/share/eigen3/cmake:$CMAKE_PREFIX_PATH
+            ''; 
           };
+          enzyme = pkgs.mkShell { buildInputs = [ pkgs.rustc ]; };
         };
       };
   nixConfig = {

@@ -3,7 +3,7 @@ use nalgebra::{OPoint, U3, Matrix3};
 use crate::{Real};
 use crate::spatial::{SpatialVelocity, SpatialForce};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Rigidbody {
     pub mass: Real,
     pub com: OPoint<Real, U3>,
@@ -15,8 +15,8 @@ impl Mul<&SpatialVelocity> for &Rigidbody {
     type Output = SpatialForce;
 
     fn mul(self, v: &SpatialVelocity) -> SpatialForce {
-        SpatialForce {
-            lin: v.lin*self.mass - self.com.coords.cross(&v.rot),
+        SpatialForce { //(2.63)
+            lin: v.lin*self.mass - self.mass*self.com.coords.cross(&v.rot),
             rot: self.inertia*v.rot + self.com.coords.cross(&v.lin)*self.mass
         }
     }
