@@ -10,7 +10,7 @@
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/rnea.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
-
+#include "pinocchio/algorithm/crba.hpp"
 
 Eigen::VectorXd cast_farray(float* arr) {
   Eigen::Map<Eigen::VectorXf> vec_float(arr, 7); 
@@ -41,7 +41,7 @@ void bench_pinocchio(double* q, double* dq, double* ddq) {
   Eigen::VectorXd q_ = cast_darray(q);
   Eigen::VectorXd dq_ = cast_darray(dq);
   Eigen::VectorXd ddq_ = cast_darray(ddq);
-
+  
   benchmark("pinocchio RNEA", [&]() { pinocchio::rnea(model, data, q_, dq_, ddq_); });
   pinocchio::rnea(model, data, q_, dq_, ddq_);
   auto pin_tau = data.tau;
@@ -51,6 +51,10 @@ void bench_pinocchio(double* q, double* dq, double* ddq) {
   pinocchio::forwardKinematics(model, data, q_);
   Eigen::VectorXd pin_pose = data.oMi[6].translation();
   std::cout << "pinocchio: " << pin_pose.transpose() << std::endl;
+
+  benchmark("pinocchio crba", [&]() { pinocchio::forwardKinematics(model, data, q_); });
+  Eigen::MatrixXd pin_H = pinocchio::crba(model, data, q_); 
+  std::cout << "pinocchio: " << pin_H << std::endl;
 }
 
 void bench_rigidbody(double* q, double* dq, double* ddq) {
@@ -64,6 +68,11 @@ void bench_rigidbody(double* q, double* dq, double* ddq) {
   double* pos = multibody_fwd_kin(mb, q);
   Eigen::Map<Eigen::VectorXd> vec(pos, 3);
   std::cout << "rigidbody: " << vec.transpose() << std::endl;
+
+  benchmark("rigidbody crba", [&]() {multibody_crba(mb, q); });
+  double* H = multibody_crba(mb, q);
+  Eigen::Map<Eigen::MatrixXd> H_(pos, 7, 7);
+  std::cout << "rigidbody: " << H_ << std::endl;
 }
   
 int main() {
