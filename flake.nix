@@ -18,6 +18,51 @@
         inherit system overlays;
       };
 
+      rustEnzyme = pkgs.stdenv.mkDerivation {
+          name = "rust-enzyme";
+          src = pkgs.fetchFromGitHub {
+            owner = "EnzymeAD";
+            repo = "rust";
+            rev = "master"; # Replace with specific commit/tag if needed
+            sha256 = "0000000000000000000000000000000000000000000000000000"; # Replace after first build
+            depth = 1;
+          };
+
+          buildInputs = with pkgs; [
+            clang
+            cmake
+            ninja
+            pkg-config
+            python3
+            curl
+            libssl.dev
+            build-essential
+          ];
+
+          configurePhase = ''
+            ./configure \
+              --enable-llvm-link-shared \
+              --enable-llvm-plugins \
+              --enable-llvm-enzyme \
+              --release-channel=nightly \
+              --enable-llvm-assertions \
+              --enable-clang \
+              --enable-lld \
+              --enable-option-checking \
+              --enable-ninja \
+              --disable-docs
+          '';
+
+          buildPhase = ''
+            ./x dist
+          '';
+
+          installPhase = ''
+            mkdir -p $out
+            cp -r build/dist/* $out/
+          '';
+        };
+      
       toolchain = fenix.packages.${system}.latest.toolchain;
       rustPlatform = pkgs.makeRustPlatform {
         cargo = toolchain;
@@ -70,7 +115,8 @@
           default = pkgs.mkShell {
             packages = [
               #benchmark
-              rigidbody
+              #rigidbody
+              rustEnzyme
             ];
           };
         };
