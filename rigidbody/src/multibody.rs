@@ -21,15 +21,13 @@ use parry3d::mass_properties::MassProperties;
 use itertools::izip;
 use crate::spatial::{SpatialForce, SpatialVelocity, BodyJacobian};
 use crate::joint::*;
-use crate::rigidbody::RigidbodyInertia;
+use crate::inertia::Inertia;
 use crate::{Real, Transform};
 
 const body_jac: BodyJacobian = BodyJacobian::revolute_z();
 
-//pub struct Multibody(Vec<RevoluteJoint>);
 #[derive(Debug)]
 pub struct Multibody([RevoluteJoint; 7]);
-
 
 impl Multibody {
     pub fn from_urdf(path: &Path) -> Multibody {
@@ -102,8 +100,8 @@ impl Multibody {
 
         tau
     }
-    
-    pub fn rnea_zip(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
+     
+   pub fn rnea_zip(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
         // Vel, acc, force of current link, in local link coordinates
         let mut v = SpatialVelocity::new();
         let mut a = SpatialVelocity {
@@ -146,10 +144,10 @@ impl Multibody {
             }
         ).collect::<Vec<_>>().try_into().expect("Directly build torques")
     }
-
+    
     pub fn crba(&self, q: &[Real]) -> &[Real] {
         let H = Matrix::<Real, Const<7>, Const<7>, _>::identity();
-        let I: [&RigidbodyInertia; 7] = self.0.iter()
+        let I: [&Inertia; 7] = self.0.iter()
             .map(|jt| {&jt.body})
             .collect::<Vec<_>>()
             .try_into()
