@@ -72,10 +72,10 @@ void bench_rigidbody(double* q, double* dq, double* ddq) {
   benchmark("rigidbody crba", [&]() {multibody_crba(mb, q); });
   double* H = multibody_crba(mb, q);
   std::cout << "rigidbody: ";
-  Eigen::MatrixXd H_;
+  Eigen::MatrixXd H_(7,7);
   for (int i = 0; i<7; i++) {
     for (int j = 0; j<7; j++) {
-      H_(i, j) = H[i+7*j];
+      H_(i, j) = H[7*i+j];
     }
   }
   std::cout << "rigidbody: " << H_ << std::endl;
