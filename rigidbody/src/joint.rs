@@ -37,6 +37,10 @@ impl RevoluteJoint {
         self.parent*&self.joint_transform(q)
     }
 
+    pub fn parent_to_child_borrowed<'a> (&self, q: &'a Real) -> &'a Transform {
+        self.parent*&self.joint_transform(*q)
+    }
+    
     /// Transformation from parent coordinate system to the child
     #[inline(always)]
     pub fn child_to_parent(&self, q: Real) -> Transform {

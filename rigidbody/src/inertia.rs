@@ -136,8 +136,8 @@ fn test_inertia_transform() {
     let rb26_ = bxastar*rb6*axb;
     let rb26 = rb2.clone().to_matrix6();
     
-    println!("feather: {}", rb26_);
-    println!("hand:    {}", rb26);
+    //println!("feather: {}", rb26_);
+    //println!("hand:    {}", rb26);
 }
 
 #[test]
@@ -152,7 +152,7 @@ fn test_inertia_add() {
     let rb6 = rb.clone().to_matrix6();
     let rb26 = rb2.clone().to_matrix6();
 
-    println!("feather add: {}", rb6+rb26);
-    println!("hand add:    {}", (rb+rb2).to_matrix6());    
+    //println!("feather add: {}", rb6+rb26);
+//    println!("hand add:    {}", (rb+rb2).to_matrix6());    
 }
 

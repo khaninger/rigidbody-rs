@@ -45,6 +45,10 @@ impl Multibody {
         Multibody(jts.try_into().unwrap())
     }
 
+    pub fn iter(&self) -> impl Iterator<Item=&RevoluteJoint> {
+        self.0.iter()
+    }            
+    
     pub fn fwd_kin (&self, q: &[Real]) -> Transform {        
         let mut tr = Transform::identity();
         for (jt, qi) in zip(self.0.iter(), q.iter()).rev() {
@@ -102,7 +106,7 @@ impl Multibody {
         tau
     }
      
-   pub fn rnea_zip(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
+    pub fn rnea_zip(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
         // Vel, acc, force of current link, in local link coordinates
         let mut v = SpatialVelocity::new();
         let mut a = SpatialVelocity {
@@ -170,7 +174,6 @@ impl Multibody {
 }
 
 
-
 #[cfg(test)]
 mod test{
     use super::*;
@@ -204,6 +207,6 @@ mod test{
     fn test_crba() {
         let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
         let H = mb.crba(&[1.; 7]);
-        println!("crba: {}", H);
+        //println!("crba: {}", H);
     }
 }
