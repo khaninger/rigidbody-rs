@@ -158,7 +158,12 @@ impl Multibody {
             if i > 0 {
                 I[i-1] = I[i-1].clone() + I[i].transform(jt_transform);
             }
-            H[(i,i)] = I[i].get_rotz(); 
+            H[(i,i)] = I[i].get_rotz();
+            let mut F = &I[i]*&body_jac;
+            for j in (0..i).rev() {
+                F = self.0[j+1].child_to_parent(q[j+1])*&F;                
+                H[(j,i)] = F.rot[2].clone();
+            }
         }
         H
     }

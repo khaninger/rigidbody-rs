@@ -75,7 +75,7 @@ void bench_rigidbody(double* q, double* dq, double* ddq) {
   Eigen::MatrixXd H_(7,7);
   for (int i = 0; i<7; i++) {
     for (int j = 0; j<7; j++) {
-      H_(i, j) = H[7*i+j];
+      H_(i, j) = H[i+7*j];
     }
   }
   std::cout << "rigidbody: " << H_ << std::endl;
