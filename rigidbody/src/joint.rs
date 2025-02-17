@@ -20,14 +20,14 @@ use parry3d::mass_properties::MassProperties;
 use itertools::izip;
 use crate::spatial::{SpatialForce, SpatialVelocity, BodyJacobian};
 use crate::{Real, Transform};
-use crate::rigidbody::Rigidbody;
+use crate::inertia::Inertia;
 
 /// An explicit revolute joint with a single degree of freedom
 #[derive(Debug)]
 pub struct RevoluteJoint  {
     pub axis: Unit<Vector3<Real>>, // Normed axis for the revolute joint
     pub parent: Transform, // Pose of joint coord system relative to parent
-    pub body: Rigidbody,
+    pub body: Inertia,
 }
 
 impl RevoluteJoint {
@@ -50,7 +50,7 @@ impl RevoluteJoint {
     }
     
     pub fn from_xurdf_joint(
-        joint: &Joint, link: &Link, //  parent_frame: &'b Coord
+        joint: &Joint, link: &Link,
     ) -> RevoluteJoint {
         let axis = UnitVector3::<Real>::new_normalize(convert(joint.axis));
         let parent = Transform::new(
@@ -61,17 +61,8 @@ impl RevoluteJoint {
                 joint.origin.rpy[2] as Real
             ).scaled_axis()
         );
-        let com = OPoint::<Real, U3>::new(
-            link.inertial.origin.xyz[0] as Real,
-            link.inertial.origin.xyz[1] as Real,
-            link.inertial.origin.xyz[2] as Real,
-        );
-        let mass:Real = convert(link.inertial.mass);
-        let inertia_com:Matrix3<Real> = convert(link.inertial.inertia);
-        let translate_cr = com.coords.cross_matrix();
-        let inertia = inertia_com + mass*translate_cr*(translate_cr.transpose());
         
-        let body = Rigidbody{mass, com, inertia};
+        let body  = Inertia::new(link.inertial.mass, link.inertial.origin.xyz, link.inertial.inertia);        
         RevoluteJoint{axis, parent, body}
     }
 }

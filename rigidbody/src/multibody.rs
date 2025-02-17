@@ -8,25 +8,27 @@ use nalgebra::{
     Translation3,
     Rotation3,
     Matrix3,
+    Matrix,
     UnitQuaternion,
     Unit,
     OPoint,
     U3,
-    convert
+    convert,
+    Const,
+    SMatrix
 };
 use xurdf::{Robot, Link, Joint, parse_urdf_from_file};
 use parry3d::mass_properties::MassProperties;
 use itertools::izip;
 use crate::spatial::{SpatialForce, SpatialVelocity, BodyJacobian};
 use crate::joint::*;
+use crate::inertia::Inertia;
 use crate::{Real, Transform};
 
 const body_jac: BodyJacobian = BodyJacobian::revolute_z();
 
-//pub struct Multibody(Vec<RevoluteJoint>);
 #[derive(Debug)]
 pub struct Multibody([RevoluteJoint; 7]);
-
 
 impl Multibody {
     pub fn from_urdf(path: &Path) -> Multibody {
@@ -99,8 +101,8 @@ impl Multibody {
 
         tau
     }
-    
-    pub fn rnea_zip(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
+     
+   pub fn rnea_zip(&self, q: &[Real], dq: &[Real], ddq: &[Real]) -> [Real; 7] {
         // Vel, acc, force of current link, in local link coordinates
         let mut v = SpatialVelocity::new();
         let mut a = SpatialVelocity {
@@ -142,8 +144,24 @@ impl Multibody {
                 taui
             }
         ).collect::<Vec<_>>().try_into().expect("Directly build torques")
-}
-
+    }
+    
+    pub fn crba(&self, q: &[Real]) -> SMatrix::<Real, 7, 7> {
+        let mut H = Matrix::<Real, Const<7>, Const<7>, _>::identity();
+        let mut I: [Inertia; 7] = self.0.iter()
+            .map(|jt| {jt.body.clone()})
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("Directly build inertias");
+        for i in (0..7).rev() {
+            let jt_transform = self.0[i].parent_to_child(q[i]);
+            if i > 0 {
+                I[i-1] += I[i].transform(jt_transform);
+            }
+            H[(i,i)] = I[i].get_rotz(); 
+        }
+        H
+    }
 }
 
 
@@ -175,5 +193,12 @@ mod test{
     fn bench_rneazip(b: &mut Bencher) {
         let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));    
         b.iter(|| { mb.rnea_zip(&[0.;7], &[0.;7], &[0.;7]); })        
+    }
+
+    #[test]
+    fn test_crba() {
+        let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
+        let H = mb.crba(&[1.; 7]);
+        println!("crba: {}", H);
     }
 }
