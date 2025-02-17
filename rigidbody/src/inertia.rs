@@ -1,5 +1,5 @@
 use std::ops::{Mul, AddAssign};
-use nalgebra::{OPoint, U3, Matrix3, Matrix6, Vector3, Translation3, convert};
+use nalgebra::{OPoint, U3, Matrix3, Matrix6, Vector3, Translation3, UnitQuaternion, convert};
 use crate::{Real, Transform};
 use crate::spatial::{
     SpatialVelocity,
@@ -69,7 +69,7 @@ impl Inertia {
         //let inertia = rot*(self.inertia+self.mass*translate_cr*translate_cr.transpose())*(rot.transpose());
         //let cross_term = rot*translate_cr*(-self.mass)*(rot.transpose());
         let com = tr*self.com;
-        Inertia::new(self.mass.clone(), com, self.inertia_com.clone())
+        Inertia::new(self.mass.clone(), com, rot*self.inertia_com.clone()*(rot.transpose()))
     }
 
     pub fn get_rotz(&self) -> Real {
@@ -99,10 +99,11 @@ impl Mul<&SpatialVelocity> for &Inertia {
 
 #[test]
 fn test_inertia_transform() {
-    let rb = Inertia::new(0.5, OPoint::<Real, U3>::new(0.,0.,1.), Matrix3::<Real>::identity());
+    let rb = Inertia::new(0.5, OPoint::<Real, U3>::new(0.,0.,1.), Matrix3::<Real>::new(0.1, 0.,0.,0.,0.2,0.,0.,0.,0.3));
 
     let rb6 = rb.clone().to_matrix6();
-    let tr = Transform { translation:Translation3::new(0., 0., 1.), ..Default::default()};
+    let tr = Transform { translation:Translation3::new(0., 0., 1.),
+                         rotation:UnitQuaternion::from_euler_angles(std::f64::consts::FRAC_PI_2, 0., 0.)};
     let rb2 = rb.clone().transform(tr.clone());
 
     let tr_inv = tr.inverse();
@@ -116,8 +117,10 @@ fn test_inertia_transform() {
     let rb26_ = bxastar*rb6*axb;
     let rb26 = rb2.clone().to_matrix6();
     
-    //println!("feather: {}", rb26_);
-    //println!("hand:    {}", rb26);
+    println!("feather: {}", rb26_);
+    println!("hand:    {}", rb26);
 }
 
+#[test]
+fn test_inertia_add() { }
 

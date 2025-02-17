@@ -83,7 +83,7 @@ void bench_rigidbody(double* q, double* dq, double* ddq) {
 
   
 int main() {
-  double q[7]   = {0.0f, 1.0f, 1.0f, .0f, 0.0f, 0.0f, 0.0f};
+  double q[7]   = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
   double dq[7]  = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
   double ddq[7] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
 

@@ -198,7 +198,7 @@ mod test{
     #[test]
     fn test_crba() {
         let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
-        let H = mb.crba(&[0.; 7]);
-        println!("{}", H);
+        let H = mb.crba(&[1.; 7]);
+        println!("crba: {}", H);
     }
 }
