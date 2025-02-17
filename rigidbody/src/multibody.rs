@@ -156,7 +156,7 @@ impl Multibody {
         for i in (0..7).rev() {
             let jt_transform = self.0[i].parent_to_child(q[i]);
             if i > 0 {
-                I[i-1] += I[i].transform(jt_transform);
+                I[i-1] = I[i-1].clone() + I[i].transform(jt_transform);
             }
             H[(i,i)] = I[i].get_rotz(); 
         }

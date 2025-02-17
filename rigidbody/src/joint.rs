@@ -62,7 +62,7 @@ impl RevoluteJoint {
             ).scaled_axis()
         );
         
-        let body  = Inertia::new(link.inertial.mass, link.inertial.origin.xyz, link.inertial.inertia);        
+        let body  = Inertia::from_com(link.inertial.mass, link.inertial.origin.xyz, link.inertial.inertia);        
         RevoluteJoint{axis, parent, body}
     }
 }

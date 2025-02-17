@@ -1,4 +1,4 @@
-use std::ops::{Mul, AddAssign};
+use std::ops::{Mul, Add, AddAssign};
 use nalgebra::{OPoint, U3, Matrix3, Matrix6, Vector3, Translation3, UnitQuaternion, convert};
 use crate::{Real, Transform};
 use crate::spatial::{
@@ -18,7 +18,7 @@ pub struct Inertia {
 }
 
 impl Inertia {
-    pub fn new<M, C, I>(mass: M, com: C, inertia_com: I) -> Self
+    pub fn from_com<M, C, I>(mass: M, com: C, inertia_com: I) -> Self
     where
         M: Into<Real>,
         C: Into<OPoint<Real, U3>>,
@@ -30,6 +30,22 @@ impl Inertia {
 
         let translate_cr = com.coords.cross_matrix();
         let inertia = inertia_com + mass*translate_cr*(translate_cr.transpose());
+
+        Inertia { mass, com, inertia_com, inertia}
+    }
+
+    pub fn from_origin<M, C, I>(mass: M, com: C, inertia: I) -> Self
+    where
+        M: Into<Real>,
+        C: Into<OPoint<Real, U3>>,
+        I: Into<Matrix3<Real>>,
+    {
+        let mass:Real = mass.into();
+        let com:OPoint<Real, U3> = com.into();
+        let inertia:Matrix3<Real> = inertia.into();
+
+        let translate_cr = com.coords.cross_matrix();
+        let inertia_com = inertia - mass*translate_cr*(translate_cr.transpose());
 
         Inertia { mass, com, inertia_com, inertia}
     }
@@ -69,7 +85,7 @@ impl Inertia {
         //let inertia = rot*(self.inertia+self.mass*translate_cr*translate_cr.transpose())*(rot.transpose());
         //let cross_term = rot*translate_cr*(-self.mass)*(rot.transpose());
         let com = tr*self.com;
-        Inertia::new(self.mass.clone(), com, rot*self.inertia_com.clone()*(rot.transpose()))
+        Inertia::from_com(self.mass.clone(), com, rot*self.inertia_com.clone()*(rot.transpose()))
     }
 
     pub fn get_rotz(&self) -> Real {
@@ -77,11 +93,14 @@ impl Inertia {
     }
 }
 
-impl AddAssign<Inertia> for Inertia {
-    fn add_assign(&mut self, other: Inertia) {
-        self.com = ((self.mass*self.com.coords+other.mass*other.com.coords)/(self.mass+other.mass)).into();
-        self.mass += other.mass;
-        self.inertia += other.inertia;
+impl Add<Inertia> for Inertia {    
+    type Output = Inertia;
+    fn add(self, other: Inertia) -> Inertia {
+        let com: OPoint<Real, U3> = ((self.mass*self.com.coords+other.mass*other.com.coords)/(self.mass+other.mass)).into();
+        let mass = self.mass + other.mass;
+        let inertia = self.inertia + other.inertia;
+        
+        Inertia::from_origin(mass, com, inertia)
     }
 }
 
@@ -99,7 +118,7 @@ impl Mul<&SpatialVelocity> for &Inertia {
 
 #[test]
 fn test_inertia_transform() {
-    let rb = Inertia::new(0.5, OPoint::<Real, U3>::new(0.,0.,1.), Matrix3::<Real>::new(0.1, 0.,0.,0.,0.2,0.,0.,0.,0.3));
+    let rb = Inertia::from_com(0.5, OPoint::<Real, U3>::new(0.,0.,1.), Matrix3::<Real>::new(0.1, 0.,0.,0.,0.2,0.,0.,0.,0.3));
 
     let rb6 = rb.clone().to_matrix6();
     let tr = Transform { translation:Translation3::new(0., 0., 1.),
@@ -122,5 +141,18 @@ fn test_inertia_transform() {
 }
 
 #[test]
-fn test_inertia_add() { }
+fn test_inertia_add() {
+    let rb = Inertia::from_com(0.5,
+                               OPoint::<Real, U3>::new(0.,0.,1.),
+                               Matrix3::<Real>::new(0.1,0.,0.,0.,0.2,0.,0.,0.,0.3));
+    let rb2 = Inertia::from_com(1.5,
+                               OPoint::<Real, U3>::new(1.,0.,0.),
+                               Matrix3::<Real>::new(1.1,0.,0.,0.,1.2,0.,0.,0.,1.3));
+
+    let rb6 = rb.clone().to_matrix6();
+    let rb26 = rb2.clone().to_matrix6();
+
+    println!("feather add: {}", rb6+rb26);
+    println!("hand add:    {}", (rb+rb2).to_matrix6());    
+}
 
