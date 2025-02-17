@@ -37,7 +37,7 @@
           rigidbody_bindings
         ];
         
-        patchPhase = "ls";
+
         #configurePhase = "echo $CMAKE_MODULE_PATH";
         #buildPhase = ''
         #  g++ -o main main.cpp -L${rigidbody_bindings}/bin -I${pkgs.eigen}/include/eigen3 -L${pkgs.pinocchio}/lib -lpinocchio_default -lpinocchio_parsers -lrigidbody_bindings
