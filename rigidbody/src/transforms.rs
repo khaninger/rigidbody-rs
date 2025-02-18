@@ -24,15 +24,14 @@ use crate::inertia::Inertia;
 use crate::Multibody;
 
 #[derive(Debug)]
-pub struct Transforms ([Transform; 7]);
+pub struct Transforms<'a>(&'a [Transform; 7]);
 
 pub fn make_transform<'a> (q: &'a Real, jt: &RevoluteJoint, T: &mut Transform) {
     *T = jt.parent_to_child(*q);
 }
 
-impl Transforms {
-    pub fn from_joints(mb: &Multibody, q: &[Real]) -> Self {
-        let mut arr: [Transform; 7] = [Default::default(); 7];
+impl <'a> Transforms<'a> {
+    pub fn from_joints(mb: &Multibody, q: &[Real], arr: &'a mut [Transform; 7]) -> Self {
         izip!(mb.iter(), q.iter(), arr.iter_mut())
             .map(|(jt, qi, tr)| { make_transform(qi, jt, tr) } );
         Transforms(arr)
@@ -47,11 +46,12 @@ mod test{
     
     #[test]
     fn transforms () {
+        let mut arr: [Transform; 7] = [Default::default(); 7];
         let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
         let mut ts;
         {
             let q = [0.1; 7];
-            ts = Transforms::from_joints(&mb, &q);
+            ts = Transforms::from_joints(&mb, &q, &mut arr);
             println!("{:?}", ts);
         }
         println!("{:?}", ts);
