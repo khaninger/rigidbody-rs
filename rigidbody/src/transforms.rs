@@ -19,34 +19,22 @@ use parry3d::mass_properties::MassProperties;
 use itertools::izip;
 use crate::spatial::{SpatialForce, SpatialVelocity, BodyJacobian};
 use crate::{Real, Transform};
+use crate::RevoluteJoint;
 use crate::inertia::Inertia;
 use crate::Multibody;
 
 #[derive(Debug)]
-pub struct Transfo<'a> {
-    mydata: &'a Real,
+pub struct Transforms ([Transform; 7]);
+
+pub fn make_transform<'a> (q: &'a Real, jt: &RevoluteJoint, T: &mut Transform) {
+    *T = jt.parent_to_child(*q);
 }
 
-impl <'a> Transfo<'a> {
-    pub fn from_angle(q: &'a Real) -> Transfo<'a> {
-        Transfo { mydata: q }
-    }
-
-    pub fn get_data(&self) -> &'a Real {
-        self.mydata
-    }
-}
-
-#[derive(Debug)]
-pub struct Transforms<'a>([Transfo<'a>; 7]);
-
-impl <'a> Transforms<'a> {
-    pub fn from_joints(mb: &Multibody, q: &'a [Real]) -> Self {
-        let arr: [Transfo; 7] = zip(mb.iter(), q.iter())
-            .map(|(jt, qi)| { Transfo::from_angle(qi) })//jt.parent_to_child(qi)})
-            .collect::<Vec<_>>()
-            .try_into()
-            .expect("Build transforms");
+impl Transforms {
+    pub fn from_joints(mb: &Multibody, q: &[Real]) -> Self {
+        let mut arr: [Transform; 7] = [Default::default(); 7];
+        izip!(mb.iter(), q.iter(), arr.iter_mut())
+            .map(|(jt, qi, tr)| { make_transform(qi, jt, tr) } );
         Transforms(arr)
     }
 }
@@ -56,18 +44,6 @@ impl <'a> Transforms<'a> {
 mod test{
     use super::*;
     use std::path::Path;
-
-    #[test]
-    fn transfo () {
-        let mut t;
-        
-        {
-            let r = 0.1;
-            t = Transfo::from_angle(&r);
-            println!("{:?}", t.get_data());
-        }
-//        println!("{:?}", t.get_data());  // would cause error
-    }
     
     #[test]
     fn transforms () {
@@ -78,7 +54,7 @@ mod test{
             ts = Transforms::from_joints(&mb, &q);
             println!("{:?}", ts);
         }
-  //      println!("{:?}", ts); // would cause error
+        println!("{:?}", ts);
         
     }
 }
