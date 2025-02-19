@@ -138,32 +138,21 @@ impl Multibody {
          
     pub fn crba(&self, mb_tr: &MBTransforms) -> SMatrix::<Real, 7, 7> {
         let mut H = Matrix::<Real, Const<7>, Const<7>, _>::identity();
-        //let mut I = self.0.last().unwrap().body.clone();
-        let mut I: [Inertia; 7] = self.0.iter()
-            .map(|jt| {jt.body.clone()})
-            .collect::<Vec<_>>()
-            .try_into()
-            .expect("Directly build inertias");
+        let mut I = self.0.last().unwrap().body.clone();
         for i in (0..7).rev() {
             let jt_transform = mb_tr[i];
-            if i > 0 {
-                I[i-1] = I[i-1].clone() + I[i].transform(jt_transform);
-            }
-            H[(i,i)] = I[i].get_rotz();
-            let mut F = &I[i]*&body_jac;
+                        
+            H[(i,i)] = I.get_rotz();
+            let mut F = &I*&body_jac;
             
-            //H[(i,i)] = I.get_rotz();
-            //let mut F = &I*&body_jac;
-            H[(i,i)] = I[i].get_rotz();
-            let mut F = &I[i]*&body_jac;
             for j in (0..i).rev() {
-                F = mb_tr[j+1]*&F;                
+                F = mb_tr[j+1].inverse()*&F;                
                 H[(j,i)] = F.rot[2].clone();
             }
             
-            //if i > 0 {
-            //    I = self.0[i-1].body.clone() + I.transform(jt_transform);
-           // }
+            if i > 0 {
+                I = self.0[i-1].body.clone() + I.transform(jt_transform);
+            }
         }
         H
     }
