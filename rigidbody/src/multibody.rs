@@ -48,7 +48,7 @@ impl <'a> MBTransforms<'a> {
         MBTransforms{ tr, _phantom: std::marker::PhantomData }        
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=&Transform> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Transform> {
         self.tr.iter()
     }
 }
@@ -86,11 +86,28 @@ impl Multibody {
     
     pub fn fwd_kin (&self, mb_tr: &MBTransforms) -> Transform {        
         let mut tr = Transform::identity();
-        for t in mb_tr.iter() {
+        for t in mb_tr.iter().rev() {
             tr = t*tr;
         }
         tr            
     }
+
+    pub fn jac(&self, mb_tr: &MBTransforms) -> SMatrix<Real, 6, 7> {
+        let mut j = SMatrix::<Real, 6, 7>::zeros();
+        let mut tr = Transform::identity();
+        for (i, (t, jt)) in zip(mb_tr.iter(), self.iter()).enumerate() {
+            tr = t*tr;
+            let z = tr.rotation*Vector3::z_axis();
+            let p = tr.translation.vector;
+
+            let lin_vel = z.cross(&p);
+
+            j.fixed_view_mut::<3,1>(0, i).copy_from(&lin_vel);
+            j.fixed_view_mut::<3,1>(3, i).copy_from(&z);
+        }
+        j
+    }
+
     
     pub fn rnea(&self, mb_tr: &MBTransforms, dq: &[Real], ddq: &[Real]) -> [Real; 7] {
         let mut tau = [0.; 7]; // joint torques
@@ -135,7 +152,7 @@ impl Multibody {
 
         tau
     }
-         
+
     pub fn crba(&self, mb_tr: &MBTransforms) -> SMatrix::<Real, 7, 7> {
         let mut H = Matrix::<Real, Const<7>, Const<7>, _>::identity();
         let mut I = self.0.last().unwrap().body.clone();
@@ -165,16 +182,12 @@ mod test{
     extern crate test;
     use test::Bencher;
 
+
     #[test]
-    fn test_transforms() {
+    fn bench_jac() {
         let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
-        let mut tr;
-        {
-            let q = [0.; 7];
-            tr = MBTransforms::from_joint_angles(&mb, &q);
-            println!("{:?}", tr);
-        }
-        //println!("{:?}", tr); // should error
+        let mb_tr = mb.get_transforms(&[0.; 7]);
+        println!("{}",mb.jac(&mb_tr));
     }
     
     #[bench]
