@@ -3,7 +3,6 @@
 //#![feature(slice_ptr_get)]
 
 mod spatial;
-mod transforms;
 mod joint;
 mod inertia;
 pub mod multibody;

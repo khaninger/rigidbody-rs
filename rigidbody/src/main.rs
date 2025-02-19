@@ -15,9 +15,9 @@ fn kin_test() {
     let ddq = &[0.; 7];
 
     let start = Instant::now();
-    let tau = mb.rnea(q, dq, ddq);
+    //let tau = mb.rnea(q, dq, ddq);
     let elapsed = start.elapsed();
-    println!("rnea:    took {:.2}us to find tau={:?}", elapsed.as_nanos() as f64 / 1_000., tau);
+    //println!("rnea:    took {:.2}us to find tau={:?}", elapsed.as_nanos() as f64 / 1_000., tau);
 
     let start = Instant::now();
     //let _ = mb.fwd_kin(&[-1.;7]);
