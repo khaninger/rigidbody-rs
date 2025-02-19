@@ -21,10 +21,11 @@ pub unsafe extern "C" fn multibody_rnea<'a>(mb_ptr: *const Multibody,
   
     let mb = mb_ptr.as_ref().unwrap();
     let q = slice::from_raw_parts(q_, 7);
+    let mb_tr = mb.get_transforms(q);
     let dq = slice::from_raw_parts(dq_, 7);
     let ddq = slice::from_raw_parts(ddq_, 7);
    
-    let ptr = Box::into_raw(Box::new(mb.rnea(q, dq, ddq)));
+    let ptr = Box::into_raw(Box::new(mb.rnea(&mb_tr, dq, ddq)));
     ptr as *const Real
 }
 
@@ -35,12 +36,13 @@ pub unsafe extern "C" fn multibody_crba<'a>(mb_ptr: *const Multibody,
   
     let mb = mb_ptr.as_ref().unwrap();
     let q = slice::from_raw_parts(q_, 7);
-
+    let mb_tr = mb.get_transforms(q);
+    
     //let H = mb.crba(q);
     //let flat_H: [Real; 49] = H.iter().cloned().collect::<Vec<_>>().try_into().expect("Convert");
     //let boxed_H = Box::new(flat_H);
     //let ptr = Box::into_raw(boxed_H);
-    let ptr = Box::into_raw(Box::new(mb.crba(q)));
+    let ptr = Box::into_raw(Box::new(mb.crba(&mb_tr)));
     ptr as *const Real
 }
 
@@ -51,8 +53,9 @@ pub unsafe extern "C" fn multibody_fwd_kin<'a>(mb_ptr: *const Multibody,
 ) -> *const Real {  
     let mb = mb_ptr.as_ref().unwrap();
     let q = slice::from_raw_parts(q_, 7);
+    let mb_tr = mb.get_transforms(q);
 
-    let tr = mb.fwd_kin(q);
+    let tr = mb.fwd_kin(&mb_tr);
     let ptr = Box::into_raw(Box::new(tr.translation.vector));
     ptr as *const Real
 }

@@ -36,7 +36,7 @@ impl RevoluteJoint {
     pub fn parent_to_child(&self, q: Real) -> Transform {
         self.parent*&self.joint_transform(q)
     }
-
+    
     /// Transformation from parent coordinate system to the child
     #[inline(always)]
     pub fn child_to_parent(&self, q: Real) -> Transform {
@@ -48,6 +48,7 @@ impl RevoluteJoint {
     pub fn joint_transform(&self, q: Real) -> UnitQuaternion<Real> {
         UnitQuaternion::from_scaled_axis(self.axis.scale(q))
     }
+
     
     pub fn from_xurdf_joint(
         joint: &Joint, link: &Link,
