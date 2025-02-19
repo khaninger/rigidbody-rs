@@ -12,5 +12,6 @@ pub use spatial::*;
 pub use joint::*;
 pub use multibody::*;
 
+
 pub type Real = f64;
 pub type Transform = nalgebra::Isometry3<Real>;

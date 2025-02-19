@@ -20,11 +20,11 @@ fn kin_test() {
     println!("rnea:    took {:.2}us to find tau={:?}", elapsed.as_nanos() as f64 / 1_000., tau);
 
     let start = Instant::now();
-    let _ = mb.fwd_kin(&[-1.;7]);
-    let _ = mb.fwd_kin(&[ 0.;7]);
-    let tr = mb.fwd_kin(&[ 1.;7]);
+    //let _ = mb.fwd_kin(&[-1.;7]);
+    //let _ = mb.fwd_kin(&[ 0.;7]);
+    //let tr = mb.fwd_kin(&[ 1.;7]);
     let elapsed = start.elapsed();
-    println!("fwd_kin: took {:.2}us to find EE={:?}", elapsed.as_nanos() as f64 / 3_000., tr.translation);
+    //println!("fwd_kin: took {:.2}us to find EE={:?}", elapsed.as_nanos() as f64 / 3_000., tr.translation);
 }
 
 fn main() {

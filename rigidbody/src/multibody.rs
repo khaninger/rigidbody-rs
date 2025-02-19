@@ -1,5 +1,6 @@
 //multibody.rs
 use std::path::Path;
+use std::ops::Index;
 use std::iter::{zip, Iterator};
 use nalgebra::{
     UnitVector3,
@@ -30,6 +31,36 @@ const body_jac: BodyJacobian = BodyJacobian::revolute_z();
 #[derive(Debug)]
 pub struct Multibody([RevoluteJoint; 7]);
 
+#[derive(Debug)]
+pub struct MBTransforms<'a> {
+    tr: [Transform; 7],
+    _phantom: std::marker::PhantomData<&'a Real>
+}
+
+impl <'a> MBTransforms<'a> {
+    pub fn from_joint_angles<'b>(mb: &Multibody, q: &'a [Real]) -> MBTransforms<'a> {
+        let tr: [Transform;7]  = zip(mb.iter(), q.iter())
+            .map(|(jt, &qi)| {jt.parent_to_child(qi)})
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("Direclty build transforms");
+
+        MBTransforms{ tr, _phantom: std::marker::PhantomData }        
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item=&Transform> {
+        self.tr.iter()
+    }
+}
+
+impl Index<usize> for MBTransforms<'_> {
+    type Output = Transform;
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.tr[idx]
+    }
+}
+
 impl Multibody {
     pub fn from_urdf(path: &Path) -> Multibody {
         let robot = parse_urdf_from_file(path).expect("Error loading URDF");
@@ -44,15 +75,19 @@ impl Multibody {
         }
         Multibody(jts.try_into().unwrap())
     }
-
+    
     pub fn iter(&self) -> impl Iterator<Item=&RevoluteJoint> {
         self.0.iter()
     }            
+
+    pub fn get_transforms<'a>(&self, q: &'a [Real]) -> MBTransforms<'a> {
+        MBTransforms::from_joint_angles(&self, q)
+    }
     
-    pub fn fwd_kin (&self, q: &[Real]) -> Transform {        
+    pub fn fwd_kin (&self, mb_tr: &MBTransforms) -> Transform {        
         let mut tr = Transform::identity();
-        for (jt, qi) in zip(self.0.iter(), q.iter()).rev() {
-            tr = jt.parent_to_child(*qi)*tr;
+        for t in mb_tr.iter() {
+            tr = t*tr;
         }
         tr            
     }
@@ -70,21 +105,17 @@ impl Multibody {
         };
 
         for (i, jt) in self.0.iter().enumerate() {
-            // Transform spatial vectors from parent to child link
             jt_transforms[i] = jt.parent_to_child(q[i]); //_J*X_T(i), X_J: Table 4.1, X_T(i): Ch. 4
           
             // Velocity of the joint, expressed in child link coordinates
-            //let vel_joint = body_jac*dq[i];  // vJ, (3.33)
             let vel_joint = SpatialVelocity::z_rot(dq[i]); // vJ, (3.33)
 
             // Update velocity/acc of current link            
-            //v = jt_transforms[i]*&v + &vel_joint;
-            //a = jt_transforms[i]*&a + &(body_jac*ddq[i]) + &(v.cross(&vel_joint));
             v = jt_transforms[i]*&v;
             v.rot[2] += dq[i];
                
-            a = jt_transforms[i]*&a; //+ &(v.cross(&vel_joint));
-            a.rot[2] += ddq[i]; // jt acc
+            a = jt_transforms[i]*&a;
+            a.rot[2] += ddq[i];
 
             a.lin[0] += v.lin[1]*dq[i];  // cross product unrolled
             a.lin[1] += -v.lin[0]*dq[i];
@@ -95,7 +126,6 @@ impl Multibody {
         }
         
         for (i, jt) in self.0.iter().enumerate().rev() {
-            //tau[i] = body_jac*&f[i];
             tau[i] = f[i].rot[2];
             if i > 0 {
                 let f_tr = jt_transforms[i].inverse()*&f[i];
@@ -180,10 +210,23 @@ mod test{
     extern crate test;
     use test::Bencher;
 
+    #[test]
+    fn test_transforms() {
+        let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
+        let mut tr;
+        {
+            let q = [0.; 7];
+            tr = MBTransforms::from_joint_angles(&mb, &q);
+            println!("{:?}", tr);
+        }
+        //println!("{:?}", tr);
+    }
+    
     #[bench]
     fn bench_fwd_kin(b: &mut Bencher) {
-        let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));    
-        b.iter(|| { mb.fwd_kin(&[0.;7]); })        
+        let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));
+        let mb_tr = mb.get_transforms(&[0.; 7]);
+        b.iter(|| { mb.fwd_kin(&mb_tr); })        
     }
 
     #[bench]
@@ -194,7 +237,8 @@ mod test{
     #[bench]
     fn bench_rnea(b: &mut Bencher) {
         let mb = Multibody::from_urdf(&Path::new("../assets/fr3.urdf"));    
-        b.iter(|| { mb.rnea(&[0.;7], &[0.;7], &[0.;7]); })        
+        let mb_tr = mb.get_transforms(&[0.; 7]);
+        b.iter(|| { mb.rnea(&[0.; 7], &[0.;7], &[0.;7]); })        
     }
 
     #[bench]
