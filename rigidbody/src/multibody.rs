@@ -96,16 +96,14 @@ impl Multibody {
         let mut j = SMatrix::<Real, 6, 7>::zeros();
         let mut tr = Transform::identity();
         for (i, (t, jt)) in zip(mb_tr.iter(), self.iter()).enumerate().rev() {
-
-            tr = t*tr;
            
             let v_i = tr*&body_jac; // contribution from joint i  
             
             j.fixed_view_mut::<3,1>(0, i).copy_from(&v_i.lin);
             j.fixed_view_mut::<3,1>(3, i).copy_from(&v_i.rot);
-            println!("{:?}", v_i); 
+
+            tr = t*tr;
         }
-        println!("{:?}", j);
         j
     }
 

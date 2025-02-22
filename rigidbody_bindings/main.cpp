@@ -10,6 +10,7 @@
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/rnea.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
+#include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/crba.hpp"
 
 Eigen::VectorXd cast_farray(float* arr) {
@@ -47,6 +48,11 @@ void bench_pinocchio(double* q, double* dq, double* ddq) {
   auto pin_tau = data.tau;
   std::cout << "pinocchio RNEA: " << pin_tau.transpose() << std::endl;
 
+  pinocchio::Data::Matrix6x J(6, 7);
+  benchmark("pinocchio jac", [&]() { pinocchio::computeJointJacobians(model, data, q_); });
+  pinocchio::computeJointJacobian(model, data, q_, 7, J);
+  std::cout << "pinocchio jac: " << std::endl << J << std::endl;  
+  
   benchmark("pinocchio fwd_kin", [&]() { pinocchio::forwardKinematics(model, data, q_); });
   pinocchio::forwardKinematics(model, data, q_);
   Eigen::VectorXd pin_pose = data.oMi[6].translation();
@@ -67,9 +73,9 @@ void bench_rigidbody(double* q, double* dq, double* ddq) {
   benchmark("rigidbody jac", [&]() {multibody_crba(mb, q); });
   double* J = multibody_jac(mb, q);
   Eigen::MatrixXd J_(6,7);
-  for (int i = 0; i<6; i++) {
-    for (int j = 0; j<7; j++) {
-      J_(i, j) = J[7*i+j];
+  for (int i = 0; i<7; i++) {
+    for (int j = 0; j<6; j++) {
+      J_(j,i) = J[6*i+j];
     }
   }
   std::cout << "rigidbody jac: " << std::endl << J_ << std::endl;
@@ -93,7 +99,8 @@ void bench_rigidbody(double* q, double* dq, double* ddq) {
 
   
 int main() {
-  double q[7]   = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+  //double q[7]   = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+  double q[7]   = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
   double dq[7]  = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
   double ddq[7] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
 
