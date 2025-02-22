@@ -6,6 +6,5 @@ edition.workspace = true
 [dependencies]
 rigidbody = { path = "../rigidbody" }
 
-# This exports a rigidbody.so in targets, but somehow breaks imports in main.rs
 [lib]
 crate-type = ["cdylib"]

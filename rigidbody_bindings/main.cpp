@@ -10,6 +10,7 @@
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/rnea.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
+#include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/crba.hpp"
 
 Eigen::VectorXd cast_farray(float* arr) {
@@ -45,16 +46,21 @@ void bench_pinocchio(double* q, double* dq, double* ddq) {
   benchmark("pinocchio RNEA", [&]() { pinocchio::rnea(model, data, q_, dq_, ddq_); });
   pinocchio::rnea(model, data, q_, dq_, ddq_);
   auto pin_tau = data.tau;
-  std::cout << "pinocchio: " << pin_tau.transpose() << std::endl;
+  std::cout << "pinocchio RNEA: " << pin_tau.transpose() << std::endl;
 
+  pinocchio::Data::Matrix6x J(6, 7);
+  benchmark("pinocchio jac", [&]() { pinocchio::computeJointJacobians(model, data, q_); });
+  pinocchio::computeJointJacobian(model, data, q_, 7, J);
+  std::cout << "pinocchio jac: " << std::endl << J << std::endl;  
+  
   benchmark("pinocchio fwd_kin", [&]() { pinocchio::forwardKinematics(model, data, q_); });
   pinocchio::forwardKinematics(model, data, q_);
   Eigen::VectorXd pin_pose = data.oMi[6].translation();
-  std::cout << "pinocchio: " << pin_pose.transpose() << std::endl;
+  std::cout << "pinocchio fwd_kin: " << pin_pose.transpose() << std::endl;
 
   benchmark("pinocchio crba", [&]() { pinocchio::forwardKinematics(model, data, q_); });
   Eigen::MatrixXd pin_H = pinocchio::crba(model, data, q_); 
-  std::cout << "pinocchio: " << pin_H << std::endl;
+  std::cout << "pinocchio crba: " << std::endl << pin_H << std::endl;
 }
 
 void bench_rigidbody(double* q, double* dq, double* ddq) {
@@ -62,28 +68,39 @@ void bench_rigidbody(double* q, double* dq, double* ddq) {
 
   benchmark("rigidbody RNEA", [&]() {multibody_rnea(mb, q, dq, ddq); });
   double* tau = multibody_rnea(mb, q, dq, ddq);
-  std::cout << "rigidbody: " << cast_darray(tau).transpose() << std::endl;
+  std::cout << "rigidbody RNEA: " << std::endl << cast_darray(tau).transpose() << std::endl;
 
+  benchmark("rigidbody jac", [&]() {multibody_crba(mb, q); });
+  double* J = multibody_jac(mb, q);
+  Eigen::MatrixXd J_(6,7);
+  for (int i = 0; i<7; i++) {
+    for (int j = 0; j<6; j++) {
+      J_(j,i) = J[6*i+j];
+    }
+  }
+  std::cout << "rigidbody jac: " << std::endl << J_ << std::endl;
+  
   benchmark("rigidbody fwd_kin", [&]() {multibody_fwd_kin(mb, q); });
   double* pos = multibody_fwd_kin(mb, q);
   Eigen::Map<Eigen::VectorXd> vec(pos, 3);
-  std::cout << "rigidbody: " << vec.transpose() << std::endl;
+  std::cout << "rigidbody fwd_kin: " << vec.transpose() << std::endl;
 
   benchmark("rigidbody crba", [&]() {multibody_crba(mb, q); });
   double* H = multibody_crba(mb, q);
-  std::cout << "rigidbody: ";
   Eigen::MatrixXd H_(7,7);
   for (int i = 0; i<7; i++) {
     for (int j = 0; j<7; j++) {
       H_(i, j) = H[i+7*j];
     }
   }
-  std::cout << "rigidbody: " << H_ << std::endl;
+  std::cout << "rigidbody crba: " << std::endl << H_ << std::endl;
+
 }
 
   
 int main() {
-  double q[7]   = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+  //double q[7]   = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+  double q[7]   = {0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f};
   double dq[7]  = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
   double ddq[7] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
 
