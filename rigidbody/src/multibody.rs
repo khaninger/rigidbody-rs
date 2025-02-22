@@ -76,7 +76,7 @@ impl Multibody {
         Multibody(jts.try_into().unwrap())
     }
     
-    pub fn iter(&self) -> impl Iterator<Item=&RevoluteJoint> {
+    pub fn iter(&self)  -> std::slice::Iter<'_, RevoluteJoint> {
         self.0.iter()
     }            
 
@@ -95,16 +95,17 @@ impl Multibody {
     pub fn jac(&self, mb_tr: &MBTransforms) -> SMatrix<Real, 6, 7> {
         let mut j = SMatrix::<Real, 6, 7>::zeros();
         let mut tr = Transform::identity();
-        for (i, (t, jt)) in zip(mb_tr.iter(), self.iter()).enumerate() {
+        for (i, (t, jt)) in zip(mb_tr.iter(), self.iter()).enumerate().rev() {
+
             tr = t*tr;
-            let z = tr.rotation*Vector3::z_axis();
-            let p = tr.translation.vector;
-
-            let lin_vel = z.cross(&p);
-
-            j.fixed_view_mut::<3,1>(0, i).copy_from(&lin_vel);
-            j.fixed_view_mut::<3,1>(3, i).copy_from(&z);
+           
+            let v_i = tr*&body_jac; // contribution from joint i  
+            
+            j.fixed_view_mut::<3,1>(0, i).copy_from(&v_i.lin);
+            j.fixed_view_mut::<3,1>(3, i).copy_from(&v_i.rot);
+            println!("{:?}", v_i); 
         }
+        println!("{:?}", j);
         j
     }
 
